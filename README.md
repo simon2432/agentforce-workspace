@@ -17,7 +17,7 @@ idea → PRD aprobado ──┤
 1. `npm install` y después `pwsh tools/bootstrap.ps1` — te dice qué falta instalar y cómo
    (Node, Salesforce CLI, Claude Code, Python, el plugin de seguridad).
 2. Conectá una org: `sf org login web --alias <ALIAS>` y `sf config set target-org <ALIAS>`.
-3. Abrí Claude Code en esta carpeta y corré `/actualizar-skills` (skills al día). Reiniciá.
+3. Abrí Claude Code en esta carpeta y corré `/actualizar-entorno` (skills al día). Reiniciá.
 4. Pegá el prompt de **[templates/INICIAR.md](templates/INICIAR.md)**.
    Claude te guía por todo el resto — no necesitás saber programar.
 

@@ -316,6 +316,18 @@ Unresolved platform bugs, limitations, and edge cases that affect Agent Script d
 
 ---
 
+### Issue 21: `sf agent preview start --api-name` fails with "Invalid user ID provided on start session" for Employee Agents (InternalCopilot)
+- **Status**: OPEN
+- **Date Discovered**: 2026-07-28
+- **Affects**: `sf agent preview start --api-name <Bot>` against a published + activated Employee Agent (`BotDefinition.Type = 'InternalCopilot'`)
+- **Symptom**: `AgentApiException: Bad Request: Invalid user ID provided on start session:` (HTTP 400) on `v6.0.0/agents/<botId>/sessions`. `--authoring-bundle --use-live-actions` preview against the same `.agent` works perfectly (real backing logic, real data).
+- **Root Cause**: Unknown. **Isolated to rule out agent-specific misconfiguration**: reproduced the identical error against a completely unrelated, pre-existing, already-configured Employee Agent in the same org (`Customer_Insights` / Marketing Agent), which had nothing to do with this session's work. This confirms the issue is org-wide or CLI-wide for `InternalCopilot` agents via the Agent Runtime API preview endpoint, not specific to any one agent's Agent Script, permission set, or `agentAccesses` configuration.
+- **Workaround**: Rely on `sf agent preview start --authoring-bundle <Name> --use-live-actions` for behavioral validation before publish (uses the same deployed Flows/Apex, same real data) — publish only changes metadata structure, not agent behavior, per SKILL.md's own model ("Publish validates metadata structure, not agent behavior"). To eyeball the published agent, open it in Agentforce Studio (`sf org open agent --api-name <Bot>`) instead of CLI preview.
+- **Open Questions**: Is this specific to `InternalCopilot`/Employee Agents (vs. Service Agents)? Is it an org edition/feature-enablement gap, or a CLI regression? Does `sf agent test run` (Connect API, different code path) hit the same issue?
+- **Update 2026-07-29 — partial answer to the open question**: tested `sf agent test create` (compiles the testSpec YAML into `AiEvaluationDefinition` and deploys it) against a healthy `InternalCopilot` agent (1 Bot, 1 active BotVersion, no duplicates, permission set with correct `agentAccesses`). It did **not** reproduce "Invalid user ID provided on start session" — it failed with a **different, earlier** error in the pipeline: `DeploymentFailed: Not available for deploy for this organization`, at the `AiEvaluationDefinition` deploy step, before ever reaching `test run`. This generic Metadata API message also appears for unrelated metadata types (confirmed in `platform-policy-rule-generate/references/deploy-errors.md`) when the org is missing an internal permission/feature gate for that specific type — it is not a testSpec or `.agent` syntax error. Conclusion: `sf agent test create`/`run` does use a different code path than `preview --api-name` (confirmed by failing differently) — but in this particular org, **neither post-publish verification path works**, for org feature-enablement reasons, not because of broken agent work. The only reliable behavioral verification in this org is `sf agent preview --authoring-bundle --use-live-actions`.
+
+---
+
 ## Resolved Issues
 
 ### Issue 16: `connections:` (plural) wrapper block not valid — use `connection messaging:` (singular)

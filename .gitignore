@@ -53,13 +53,34 @@ $RECYCLE.BIN/
 
 # Los symlinks de .claude/skills/ son por-máquina (en Windows dependen de Modo
 # Desarrollador y core.symlinks; clonados sin eso quedan como archivos de texto
-# rotos). Se regeneran con /actualizar-skills o npx skills.
+# rotos). Se regeneran con /actualizar-entorno o npx skills.
 .claude/skills/
 
 # Traces y salidas de preview/test — ruido local
 traces/
 *.trace.json
 agent-preview-*.json
+
+# --- Trabajo específico de cada situación: NUNCA se commitea en este repo --
+# Este repo es un ENTORNO DE DESARROLLO, no el destino del trabajo. Todo lo que
+# se construye acá se despliega a la org de Salesforce (deploy) — nunca se sube
+# a este repositorio. El pensamiento (specs/) y el artefacto (force-app/,
+# scripts ad-hoc) se quedan siempre locales. Esta regla no se saca nunca, para
+# nadie: no hay escenario en el que un trabajo puntual se commitee acá.
+specs/*
+!specs/_TEMPLATE-agente/
+!specs/_TEMPLATE-general/
+
+# Todo el metadata construido (agentes, Apex, Flows, objetos, permission sets,
+# LWC, etc.) se despliega a la org — no se commitea en este repo.
+force-app/main/default/*
+
+# Scripts de ejemplo genéricos del repo base sí quedan; scripts ad-hoc de un
+# trabajo puntual (seeds de datos, etc.) no.
+scripts/apex/*
+!scripts/apex/hello.apex
+scripts/soql/*
+!scripts/soql/account.soql
 
 # Nunca commitear credenciales ni datos de cliente
 **/authFiles/

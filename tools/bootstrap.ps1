@@ -93,7 +93,7 @@ if (Test-Path ".claude/skills/agentforce-generate/SKILL.md") {
 } else {
     Write-Host "  FALTA .claude/skills no resuelve (clon nuevo o symlinks rotos)" -ForegroundColor Red
     Write-Host "        activá Modo Desarrollador en Windows y corré: npx skills forcedotcom/sf-skills --all" -ForegroundColor Yellow
-    Write-Host "        (o /actualizar-skills desde Claude Code)" -ForegroundColor Yellow
+    Write-Host "        (o /actualizar-entorno desde Claude Code)" -ForegroundColor Yellow
     $issues += ".claude/skills no resuelve -> npx skills forcedotcom/sf-skills --all"
 }
 

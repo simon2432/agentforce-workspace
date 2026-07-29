@@ -7,9 +7,16 @@ Abrí Claude Code en esta carpeta y **copiá y pegá esto** — es lo único que
 ```
 Quiero arrancar un trabajo nuevo en Salesforce. Guiame según el proceso de este repo:
 
-0. Chequeá la fecha del último commit que tocó skills-lock.json. Si pasó más de una
-   semana (o nunca se corrió), ofreceme correr /actualizar-skills antes de empezar,
-   explicándome en una línea por qué conviene.
+0. VERIFICACIÓN DE ENTORNO, siempre, antes de todo. Primero confirmá que las herramientas
+   base de la máquina estén instaladas (Node, Salesforce CLI, Claude Code, Python) — si es
+   la primera vez en esta máquina o tenés dudas, corré `pwsh tools/bootstrap.ps1` y mostrame
+   qué falta antes de seguir. Después chequeá las 3 piezas del toolchain del repo:
+   - sf-skills: fecha del último commit que tocó skills-lock.json
+   - plugin ADLC: claude plugin list
+   - MCP de docs: que .mcp.json exista y que salesforce_docs_search responda
+   Si alguna falta o tiene más de una semana, ofreceme correr /actualizar-entorno antes
+   de empezar, explicándome en una línea por qué conviene. Sin estas 3 piezas al día,
+   Agent Script se escribe con sintaxis vieja o inventada.
 1. Preguntame primero QUÉ quiero hacer, en mis palabras.
 2. Clasificalo: ¿es un AGENTE Agentforce, o es TRABAJO GENERAL de Salesforce
    (objetos, campos, flows, Apex, pantallas, permisos, reportes, integraciones)?

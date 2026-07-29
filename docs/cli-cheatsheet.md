@@ -47,17 +47,34 @@ a backing logic — eso lo agarra `publish`.
 
 ## Deploy vs Publish
 
+**El pipeline oficial son TRES comandos** ([blog Salesforce, may 2026](https://developer.salesforce.com/blogs/2026/05/new-agentforce-metadata-and-development-lifecycle)):
+
 ```powershell
-# STAGING: deja el bundle DRAFT en Studio. NO crea Bot/BotVersion/GenAiPlannerBundle.
+# 1. SUBIR el .agent local -> actualiza el DRAFT que muestra el Builder
 sf project deploy start --json --metadata AiAuthoringBundle:<Developer_Name>
 
-# RUNTIME REAL: compila y crea todo el grafo de entidades. Autosuficiente.
+# 2. COMMIT -> compila el DRAFT DE LA ORG y crea Bot + BotVersion + GenAiPlannerBundle
 sf agent publish authoring-bundle --json --api-name <Developer_Name>
+
+# 3. ACTIVAR -> sin esto queda INACTIVO (no hay preview ni test)
+sf agent activate   --json --api-name <Developer_Name>
+sf agent deactivate --json --api-name <Developer_Name>
+
+# abrir en el Builder — son DOS pantallas distintas, sin --json
+sf org open authoring-bundle                    # vista de autoría (incluye DRAFT)
+sf org open agent --api-name <Bot_API_Name>     # vista del agente publicado
 
 # backing logic
 sf project deploy start --json --metadata ApexClass Flow PromptTemplate
 sf project deploy start --json --metadata PermissionSet:<Name>
 ```
+
+⚠️ **`sf agent publish` compila el DRAFT que está en la org, NO tu archivo local.**
+Si salteás el paso 1, publicás contenido viejo. Síntoma: el "Last Modified" del agente en
+el Builder **no cambia** después de publicar.
+
+Atajo todo-en-uno (queda vivo sin commit manual):
+`sf project deploy start --json --metadata AiAuthoringBundle,GenAiPlannerBundle`
 
 ⚠️ **Nunca** `sf project deploy start --source-dir force-app` a pelo: cuelga 2+ min si hay
 `AiEvaluationDefinition` bajo `force-app/` (bug abierto de plataforma).
@@ -67,6 +84,34 @@ sf project deploy start --json --metadata PermissionSet:<Name>
 ```powershell
 sf project retrieve start --json --metadata AiAuthoringBundle:<Developer_Name>
 ```
+
+Mirá el `<target>` en `bundle-meta.xml` (ej. `MiAgente.v2`).
+
+### Bundles pelados vs. con sufijo
+
+| | `MiAgente` (pelado) | `MiAgente_1` (con sufijo) |
+|---|---|---|
+| Qué es | Copia editable, apunta al DRAFT más alto | Snapshot congelado de la v1 publicada |
+| Se edita | ✅ acá van TODOS los cambios | ❌ read-only (`<target>` lo bloquea) |
+| Deploy con cambios | OK | Falla: "content cannot be changed on a locked version" |
+
+### ⚠️ `Metadata retrieval failed` al publicar = falso negativo
+
+```
+MetadataTransferError: Metadata API request failed: Metadata retrieval failed:
+context: AgentPublishAuthoringBundle
+```
+
+El publish **funcionó**; falla el retrieve automático posterior. Reproducido 3 veces con
+los 4 chequeos oficiales en verde. **No republiques.** Verificá contra la org:
+
+```powershell
+sf data query --json -q "SELECT DeveloperName FROM BotDefinition WHERE DeveloperName = '<Name>'"
+sf agent activate --json --api-name <Bot_API_Name>
+```
+
+**Verificá el publish consultando la org, no buscando el snapshot local** — con este bug
+la carpeta `MiAgente_N` puede no bajar aunque la versión exista.
 
 Solo una versión activa a la vez; activar una nueva desactiva la anterior.
 

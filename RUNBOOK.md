@@ -49,11 +49,47 @@ sf agent preview end   --json --authoring-bundle Smoke_Test --session-id <ID>
 
 Si esto anda, cualquier falla futura es **tu agente**, no el setup. Eso vale oro al debuggear.
 
-## A1 — Generar el `.agent`
+## A1 — Generar el `.agent` (y garantizar que quede en el Builder NUEVO)
+
+### Cómo se decide en qué Builder vive un agente
+
+No lo elegís con un flag: lo determina **qué metadata existe**.
+
+| Metadata en la org | Dónde vive | Editable con Agent Script |
+|---|---|---|
+| `AiAuthoringBundle` (+ `Bot`/`BotVersion` si está commiteado) | **Builder nuevo** | ✅ sí |
+| Solo `Bot` + `BotVersion`, sin `AiAuthoringBundle` | Builder legacy | ❌ no |
+
+Fuente: [Retrieve and Deploy Agent Metadata](https://developer.salesforce.com/docs/ai/agentforce/guide/agent-dx-deploy-metadata.html).
+
+**Reglas para no terminar en el legacy:**
+
+1. **Creá siempre con `sf agent generate authoring-bundle`.** Genera un `AiAuthoringBundle`
+   → Builder nuevo.
+2. **Nunca uses `sf agent create`.** Crea `Bot`/`BotVersion` sin bundle → legacy, sin
+   Agent Script, no se puede recuperar.
+3. **El `deploy` del paso A4 no es opcional.** Es lo que sube el `AiAuthoringBundle` y lo
+   que hace que el Builder nuevo muestre tu agente. Sin él, el `publish` puede crear el
+   `Bot` a partir de un DRAFT viejo y el resultado se ve "legacy" o desactualizado.
+4. **Preferí crear de cero antes que traer un agente existente.** Hacer `retrieve` de un
+   agente creado a mano funciona, pero es donde más se confunde sobre qué bundle es cuál.
+   Un `generate` limpio evita esa clase entera de problemas.
+
+### Comando
 
 ```powershell
 sf agent generate authoring-bundle --json --no-spec --name "<Label>" --api-name <Developer_Name>
 ```
+
+- `--no-spec` es **obligatorio**: sin él la CLI queda esperando input y cuelga.
+- `--name` es el label legible (puede tener espacios) → `agent_label`.
+- `--api-name` es el identificador (sin espacios) → `developer_name`.
+- **El `--api-name` no puede estar en uso por ningún `Bot` existente**, ni siquiera uno
+  borrado a medias. Si lo está, el deploy falla con
+  *"The DeveloperName '<X>' is already in use by a Bot Definition"*.
+
+Crea la carpeta `aiAuthoringBundles/<Developer_Name>/` con el `.agent` y el
+`bundle-meta.xml` (sin `<target>` = DRAFT).
 
 Después, en Claude Code:
 
@@ -86,18 +122,70 @@ No te olvides del **Agent User** con licencia
 (`.agents/skills/agentforce-generate/references/agent-user-setup.md`) — su falta hace fallar
 el publish con un error poco claro.
 
-## A4 — Publish y activar
+## A4 — Publish **y activar** (son dos pasos, no uno)
+
+**Son TRES comandos.** Saltear el primero es el error más caro del pipeline.
 
 ```powershell
-sf agent publish authoring-bundle --json --api-name <Developer_Name>
+# 1. SUBIR el .agent local a la org (actualiza el DRAFT que ve el Builder)
+sf project deploy start --json --metadata AiAuthoringBundle:<Developer_Name> -o <ALIAS>
+
+# 2. COMMIT: compila el DRAFT y crea Bot + BotVersion + GenAiPlannerBundle
+sf agent publish authoring-bundle --json --api-name <Developer_Name> -o <ALIAS>
+
+# 3. ACTIVAR: sin esto el agente existe pero está INACTIVO
+sf agent activate --json --api-name <Developer_Name> -o <ALIAS>
 ```
 
-Compila Agent Script → crea `Bot` + `BotVersion` + `GenAiPlannerBundle` + `GenAiPlugins`.
-`sf project deploy start` **no hace esto** (solo staging DRAFT).
+> ⚠️ **`sf agent publish` compila el DRAFT que está en la org, NO tu archivo local.**
+> Sin el deploy del paso 1, publicás contenido viejo: el Builder sigue mostrando la versión
+> anterior y el runtime se crea con lo que había. Todo parece publicado sin serlo.
+>
+> **Verificación:** después de publicar, el "Last Modified" del agente en el Builder tiene que
+> haber cambiado. Si no cambió, el deploy nunca ocurrió.
 
-`publish` no devuelve la versión creada; para verla:
+Publicar tampoco activa: paso 2 y paso 3 son distintos. Sin activar no hay preview por
+`--api-name` ni `sf agent test run`.
+
+### ⚠️ `Metadata retrieval failed` al publicar = falso negativo
+
+```
+MetadataTransferError: Metadata API request failed: Metadata retrieval failed:
+context: AgentPublishAuthoringBundle
+```
+
+**El publish funcionó.** Falla el retrieve automático posterior. Reproducido 3 veces con
+los 4 chequeos oficiales de troubleshooting en verde. **No republiques** — inflás versiones
+sin necesidad. Verificá contra la org (`SELECT DeveloperName FROM BotDefinition WHERE...`)
+y seguí al activate.
+
+### Checklist de verificación (hacela vos, a ojo)
+
+| Chequeo | Dónde | Qué tiene que pasar |
+|---|---|---|
+| El agente aparece en el Builder nuevo | lista de Agents del Builder | está en la lista |
+| El deploy subió tus cambios | Builder, columna "Last Modified" | **cambió a hoy** |
+| El publish creó el runtime | `Setup > Agentforce Agents` | aparece con el ícono ↗ |
+| El activate funcionó | misma pantalla, columna Active | tiene la tilde |
+| El contenido es el tuyo | abrir el agente | están todos tus subagentes |
+
+Si el "Last Modified" **no cambió**, el deploy no ocurrió: no sigas, arreglá eso primero.
+
+Solo una versión activa a la vez; activar una nueva desactiva la anterior.
+Para bajar una versión: `sf agent deactivate --json --api-name <Bot_API_Name>`.
+
+`publish` no devuelve el número de versión creado; para verlo:
 `sf project retrieve start --json --metadata AiAuthoringBundle:<Developer_Name>`.
-Solo una versión activa a la vez.
+
+### Abrir el agente en el Builder (dos comandos distintos)
+
+```powershell
+sf org open authoring-bundle              # vista de AUTORÍA (bundles, incluye DRAFT)
+sf org open agent --api-name <Bot_API_Name>   # vista del agente PUBLICADO
+```
+
+Son pantallas diferentes. Si abrís la equivocada vas a creer que tu agente no se actualizó.
+No uses `--json` con estos: en modo JSON imprimen la URL pero no abren el navegador.
 
 ## A5 — Preview (el loop rápido, ~15s)
 

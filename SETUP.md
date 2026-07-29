@@ -46,7 +46,7 @@ En orden, después de clonar:
 1. `npm install` — instala las herramientas de formato/lint del proyecto (husky, prettier).
    Sin esto, los commits pueden fallar por los git hooks.
 2. `pwsh tools/bootstrap.ps1` — te dice qué falta y verifica los symlinks de skills.
-3. Abrí Claude Code en la carpeta y corré **`/actualizar-skills`** — deja las dos librerías
+3. Abrí Claude Code en la carpeta y corré **`/actualizar-entorno`** — deja las dos librerías
    al día y commitea el cambio.
 4. Reiniciá Claude Code.
 
@@ -59,18 +59,22 @@ Las skills de `forcedotcom/sf-skills` **ya vienen versionadas** en `.agents/skil
 pinneadas en `skills-lock.json` — el repo funciona clonado tal cual; el paso 3 solo las
 refresca a la última.
 
-### Para mantenerlas al día: `/actualizar-skills`
+### Para mantener el toolchain al día: `/actualizar-entorno`
 
 En Claude Code, escribí:
 
 ```
-/actualizar-skills
+/actualizar-entorno
 ```
 
-Es un comando del repo (vive en `.claude/commands/actualizar-skills.md`) que hace todo el
-ciclo: actualiza sf-skills **y** el plugin ADLC, te muestra qué cambió en lenguaje simple,
-verifica que no se haya roto el ruteo anti-colisión, commitea, y te recuerda reiniciar
-Claude Code. Corrélo cada tanto (una vez por semana o al arrancar un trabajo nuevo).
+Es un comando del repo (vive en `.claude/commands/actualizar-entorno.md`) que verifica y
+actualiza **las tres piezas**: sf-skills, el plugin ADLC y el MCP de docs. Te muestra qué
+cambió en lenguaje simple, verifica que no se haya roto el ruteo anti-colisión, commitea y
+te recuerda reiniciar Claude Code.
+
+**Corrélo al arrancar cada trabajo nuevo.** El prompt de `templates/INICIAR.md` ya hace que
+Claude te lo ofrezca solo. Agent Script cambia rápido: con skills viejas, Claude escribe
+sintaxis que ya no compila.
 
 > **Por qué no es automático:** `npx skills update` solo trackea instalaciones globales
 > (`-g`), no las de proyecto. Y mejor así: el comando te muestra el diff de
