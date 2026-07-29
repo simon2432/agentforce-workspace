@@ -91,3 +91,6 @@ sfdx-auth-url.txt
 **/__pycache__/
 **/.venv/
 **/venv/
+
+# Archivo local de trabajos terminados (nunca se commitea)
+_archive-trabajos/

@@ -131,6 +131,10 @@ Habilitar en Setup (una vez por org):
 - Quick Find → **Agentforce Agents** → activar
 - Data Cloud → necesario si vas a usar `agentforce-observe` (traces STDM) o retrievers
 - `sf org assign permset --json --name EinsteinGPTPromptTemplateManager`
+- Feature de **Agent Testing / `AiEvaluationDefinition`** habilitada — verificalo con el
+  admin de la org o Salesforce (no encontramos la ruta exacta de Setup, no la inventamos).
+  Sin esto, `sf agent test create` falla con `"Not available for deploy for this
+  organization"` — no es un error del repo ni del test spec.
 
 Además hace falta un **Agent User** con licencia. Ver
 `.agents/skills/agentforce-generate/references/agent-user-setup.md` — es un paso que

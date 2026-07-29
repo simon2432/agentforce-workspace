@@ -325,6 +325,16 @@ Unresolved platform bugs, limitations, and edge cases that affect Agent Script d
 - **Workaround**: Rely on `sf agent preview start --authoring-bundle <Name> --use-live-actions` for behavioral validation before publish (uses the same deployed Flows/Apex, same real data) — publish only changes metadata structure, not agent behavior, per SKILL.md's own model ("Publish validates metadata structure, not agent behavior"). To eyeball the published agent, open it in Agentforce Studio (`sf org open agent --api-name <Bot>`) instead of CLI preview.
 - **Open Questions**: Is this specific to `InternalCopilot`/Employee Agents (vs. Service Agents)? Is it an org edition/feature-enablement gap, or a CLI regression? Does `sf agent test run` (Connect API, different code path) hit the same issue?
 - **Update 2026-07-29 — partial answer to the open question**: tested `sf agent test create` (compiles the testSpec YAML into `AiEvaluationDefinition` and deploys it) against a healthy `InternalCopilot` agent (1 Bot, 1 active BotVersion, no duplicates, permission set with correct `agentAccesses`). It did **not** reproduce "Invalid user ID provided on start session" — it failed with a **different, earlier** error in the pipeline: `DeploymentFailed: Not available for deploy for this organization`, at the `AiEvaluationDefinition` deploy step, before ever reaching `test run`. This generic Metadata API message also appears for unrelated metadata types (confirmed in `platform-policy-rule-generate/references/deploy-errors.md`) when the org is missing an internal permission/feature gate for that specific type — it is not a testSpec or `.agent` syntax error. Conclusion: `sf agent test create`/`run` does use a different code path than `preview --api-name` (confirmed by failing differently) — but in this particular org, **neither post-publish verification path works**, for org feature-enablement reasons, not because of broken agent work. The only reliable behavioral verification in this org is `sf agent preview --authoring-bundle --use-live-actions`.
+- **Update 2026-07-29 (2) — Builder "Preview" tab error explained**: on a freshly
+  published+activated agent, the Builder's own Preview tab shows `"An agent with the
+  developer name <Name> already exists in this organization"`. This is the Builder's
+  embedded simulator clashing between the DRAFT `AiAuthoringBundle` (auto-recreated by
+  the platform right after publish, per "Post-Publish Workflow Is Seamless" in
+  `agent-metadata-and-lifecycle.md`) and the published `Bot` — both share the same
+  `developer_name` by design. "Reset Simulator" does NOT resolve it. Confirmed cosmetic:
+  the same agent passed 7/7 behavioral scenarios via `--authoring-bundle
+  --use-live-actions`, with real side effects verified by SOQL. Do not treat this Builder
+  error as evidence the agent is broken.
 
 ---
 

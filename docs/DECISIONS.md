@@ -129,6 +129,29 @@ pipeline correcto.
 
 ---
 
+## ADR-7 — Este repo nunca es el destino del trabajo
+
+**Decisión:** ningún trabajo puntual (specs, agentes, Apex, Flows, objetos, seeds) se
+commitea en este repo. Sin excepciones.
+
+El repo es el **entorno de desarrollo**: pipeline, skills, plantillas, convenciones. El
+destino de lo que se construye es **la org de Salesforce** (vía deploy/publish). El
+pensamiento (`specs/<Trabajo>/`) y el artefacto (`force-app/`) viven solo en la máquina
+mientras se trabaja, y al terminar se mueven a `_archive-trabajos/` (gitignoreada) o se
+borran.
+
+El `.gitignore` fuerza esta regla: `specs/*` (salvo plantillas), `force-app/main/default/*`,
+scripts ad-hoc y `_archive-trabajos/`. Así, clonar el repo da siempre una plantilla limpia,
+y ningún dato de un cliente puede filtrarse a GitHub por accidente.
+
+**Validación:** el pipeline completo (vía A: 3 comandos, backing logic, preview con
+acciones vivas) fue verificado de punta a punta en una org real el 29/07/2026. El informe
+de esa sesión, con sus hallazgos y limitaciones de entorno, quedó en el archivo del
+trabajo correspondiente — no acá, porque es historia de un desarrollo, no una decisión
+del repo.
+
+---
+
 ## Resuelto (histórico)
 
 ### Carpeta `agent/` duplicada — ELIMINADA (2026-07-27)

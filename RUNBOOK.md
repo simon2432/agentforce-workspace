@@ -41,11 +41,20 @@ Editá el `.agent` con un subagente mínimo (base:
 
 ```powershell
 sf agent validate authoring-bundle --json --api-name Smoke_Test
-sf agent publish  authoring-bundle --json --api-name Smoke_Test
+sf project deploy start --json --metadata AiAuthoringBundle:Smoke_Test        # 1. subir
+sf agent publish  authoring-bundle --json --api-name Smoke_Test               # 2. commit
+sf agent activate --json --api-name Smoke_Test                                # 3. activar
 sf agent preview start --json --authoring-bundle Smoke_Test --use-live-actions
 sf agent preview send  --json --authoring-bundle Smoke_Test --session-id <ID> -u "cuanto es 2+2"
 sf agent preview end   --json --authoring-bundle Smoke_Test --session-id <ID>
 ```
+
+La prueba de humo usa **los mismos tres comandos** que un agente real (A4) — probar un
+pipeline distinto al que vas a usar no prueba nada.
+
+> Ojo con el nombre: si ya corriste esta prueba antes en esta org y borraste el agente,
+> `Smoke_Test` quedó **quemado** (ver §3.1 de CLAUDE.md). Elegí un nombre nuevo sin
+> sufijos numéricos, p. ej. `Prueba_Humo_Julio`.
 
 Si esto anda, cualquier falla futura es **tu agente**, no el setup. Eso vale oro al debuggear.
 
@@ -122,7 +131,7 @@ No te olvides del **Agent User** con licencia
 (`.agents/skills/agentforce-generate/references/agent-user-setup.md`) — su falta hace fallar
 el publish con un error poco claro.
 
-## A4 — Publish **y activar** (son dos pasos, no uno)
+## A4 — Deploy, Publish y Activate (los TRES comandos)
 
 **Son TRES comandos.** Saltear el primero es el error más caro del pipeline.
 
@@ -200,6 +209,10 @@ sf agent preview end   --json --authoring-bundle <Developer_Name> --session-id <
 - No existen `--context` / `--session-var` / `--variables`: lógica que dependa de `@context`
   o `@session` se valida por test spec contra el agente publicado, no por preview.
 - Cada turno escribe un trace (por `PLAN_ID`): leelos, muestran ruteo e I/O de acciones.
+- Si `sf agent preview start --api-name <Name>` falla con `Invalid user ID provided on
+  start session:` en un Employee Agent (`InternalCopilot`), es un bug de plataforma
+  conocido (`known-issues.md` Issue 21) — no es tu agente. Validá con
+  `--authoring-bundle --use-live-actions` en su lugar: usa la misma backing logic real.
 
 ## A6 — Test spec
 
@@ -231,7 +244,8 @@ reproduce con preview y propone fixes al `.agent`. **Requiere Data Cloud en la o
 
 ```powershell
 sf project retrieve start --json --metadata AiAuthoringBundle:<Developer_Name>   # NO "Agent:"
-# editar el .agent → A2 validate → A5 preview → A4 publish → A6 test run
+# editar el .agent → A2 validate → A5 preview → A4 completo (deploy → publish → activate) → A6 test run
+# El deploy NO es opcional tampoco al modificar: publish compila el DRAFT de la org, no tu archivo.
 ```
 
 ---

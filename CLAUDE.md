@@ -175,6 +175,44 @@ sf agent activate --json --api-name <Bot_API_Name>
 
 ---
 
+## 3.1 Ciclo de vida de un agente — lo que rompe si no se sabe
+
+### Borrar un agente en el Builder deja huérfanos — el `developer_name` queda quemado
+
+Borrar un agente desde el Builder nuevo elimina el `AiAuthoringBundle`, pero **no** el
+`Bot` ni el `GenAiPlannerDefinition` (`<Name>_v1`) asociados. Ese planner huérfano **no
+se puede borrar**: `sf data delete record --sobject GenAiPlannerDefinition` falla con
+`DELETE_FAILED: setup object in use`, incluso sin nada visible que lo referencie.
+
+**Regla dura:** el `developer_name` de un agente borrado así queda **quemado** en esa
+org. Cualquier deploy/publish futuro con ese mismo nombre choca con el residuo
+(`"already in use by a Bot Definition"` o `"duplicate value found: GenAiPlannerDefinition"`).
+No insistas — elegí un `developer_name` nuevo y limpio. **Nunca uses sufijos numéricos
+ni `_v2`**: la plataforma ya usa `_N` para snapshots y `_vN` para planners: un nombre que
+los tenga de entrada genera confusión con esos sufijos automáticos.
+
+### "Renombrar un bundle" no existe — cambiar `developer_name` crea un agente nuevo
+
+El `developer_name` es la **identidad** del agente, no una etiqueta (`agent_label` sí lo
+es, y se cambia libremente). Cambiarlo no renombra nada: la próxima publicación crea un
+`Bot` **distinto**, con su historial de versiones desde cero.
+
+Si hace falta cambiarlo, **decíselo al usuario con esas palabras exactas** — "esto va a
+crear un agente nuevo, no a renombrar el existente" — y esperá su OK explícito antes de
+tocarlo.
+
+Al cambiarlo, actualizá también `<agentAccesses><agentName>` en el permission set del
+agente — si no, publica y activa sin errores pero **queda sin permisos y falla en
+silencio** para los usuarios que lo usan. Ese campo no se puede deployar hasta que el
+`Bot` ya exista (referencia circular): se corrige recién después del primer publish.
+
+### Employee Agent — lo básico que se olvida
+
+- Corre como el usuario logueado. **Nunca** lleva `default_agent_user` — si aparece, sacalo.
+- Su permission set se asigna a los **empleados** que lo usan, no a un usuario técnico.
+
+---
+
 ## 4. Convenciones
 
 ### Agent Script (vía A)
