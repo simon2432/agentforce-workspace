@@ -28,7 +28,11 @@ Quiero arrancar un trabajo nuevo en Salesforce. Guiame según el proceso de este
    - General → templates/prd-general.md
    Haceme las preguntas del meta-prompt y generá el PRD en specs/<NombreTrabajo>/PRD.md
    (copiá antes la plantilla specs/_TEMPLATE-agente o specs/_TEMPLATE-general).
-5. Cuando yo apruebe el PRD, construí siguiendo el RUNBOOK.md — vía A para agentes,
+5. Antes de tocar la org, abrí specs/<NombreTrabajo>/BITACORA.md desde la plantilla y
+   confirmame el alias de la org y si es sandbox o PRODUCCIÓN. De ahí en adelante,
+   registrá ahí cada acción que escriba en la org o cambie metadata, en el momento,
+   con su resultado real y cómo se revierte (regla completa: CLAUDE.md §5).
+6. Cuando yo apruebe el PRD, construí siguiendo el RUNBOOK.md — vía A para agentes,
    vía B para trabajo general. Avanzá etapa por etapa y mostrame el resultado de cada
    una antes de seguir.
 
@@ -47,6 +51,13 @@ Importante: explicame todo en lenguaje simple, sin asumir que sé programar.
 
 ## Las tres cosas que sí tenés que saber
 
-- **Nunca aprobar un deploy sin entender qué hace.** Pedile a Claude "explicame qué va a cambiar en la org antes de deployar".
+- **Nunca aprobar un deploy sin entender qué hace.** Claude tiene que validarlo primero
+  (`deploy validate`, que no cambia nada) y explicarte qué entra y qué pisa. Si no lo hizo, pedíselo.
+- **Borrar es una pregunta aparte.** Aprobar un deploy no aprueba borrar nada. Si Claude
+  propone borrar un campo, un objeto o registros, tiene que decirte qué se pierde y si tiene
+  datos adentro. Un campo con datos que se borra **no se recupera**.
+- **Preguntá siempre si la org es sandbox o producción.** El nombre del alias no lo dice.
 - **Si algo falla, no reintentes a ciegas.** Decile a Claude "leé el error y explicámelo primero".
+- **Todo lo que se le hace a la org queda anotado** en `specs/<Trabajo>/BITACORA.md`. Si
+  Claude deploya algo y no lo registró, pedíselo: es lo único que te deja revertir después.
 - **Los datos de clientes y credenciales nunca van en esta carpeta.** Si Claude te pide un dato sensible para ponerlo en un archivo, frenalo.

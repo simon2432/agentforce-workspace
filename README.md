@@ -47,7 +47,7 @@ Ya clonado, en orden:
 | Comandos verificados con sus trampas | [docs/cli-cheatsheet.md](docs/cli-cheatsheet.md) |
 | Por qué el repo está armado así | [docs/DECISIONS.md](docs/DECISIONS.md) |
 | Meta-prompts de PRD (agente / general) | [templates/](templates/) |
-| Un trabajo = una carpeta (PRD, tests, notas) | [specs/](specs/) |
+| Un trabajo = una carpeta (PRD, bitácora, notas, tests) | [specs/](specs/) |
 | Metadata deployable | `force-app/main/default/` |
 | 94 skills oficiales de Salesforce (versionadas) | `.agents/skills/` |
 
@@ -60,7 +60,8 @@ Ya clonado, en orden:
 - **[forcedotcom/sf-skills](https://github.com/forcedotcom/sf-skills)** — 94 skills oficiales
   que cubren toda la plataforma. Versionadas en `.agents/skills/`, pinneadas en `skills-lock.json`.
 - **[agentforce-adlc](https://github.com/SalesforceAIResearch/agentforce-adlc)** — plugin de
-  Claude Code. Se usa **solo** para `/agentforce-adlc:agentforce-secure` (red team OWASP de agentes).
+  Claude Code. Se usa **solo** para la pasada de seguridad: `agentforce-adlc:agentforce-test`
+  en Modo C (red team OWASP de agentes).
 - **[Salesforce Docs MCP](https://labs.agentforce.com/docs/salesforce-docs-mcp)** — docs
   oficiales en tiempo real, para que Claude no alucine sintaxis.
 

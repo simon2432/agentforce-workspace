@@ -56,6 +56,10 @@ $RECYCLE.BIN/
 # rotos). Se regeneran con /actualizar-entorno o npx skills.
 .claude/skills/
 
+# Log crudo del hook de bitácora (tools/log-sf.ps1). Es respaldo por trabajo:
+# se consolida en specs/<Trabajo>/BITACORA.md y no se commitea. Ver CLAUDE.md §5.
+.bitacora/
+
 # Traces y salidas de preview/test — ruido local
 traces/
 *.trace.json

@@ -26,6 +26,11 @@ separado y no encadenes: si algo falla, frená y explicámelo.
   ```
   Requiere Python 3.9+ (`py --version`). Verificalo antes.
 - Si SÍ está: `claude plugin update agentforce-adlc@agentforce-adlc`
+- **Después de actualizar, listá qué skills expone realmente el plugin:**
+  `ls ~/.claude/plugins/cache/agentforce-adlc/agentforce-adlc/<version>/skills`
+  ADLC renombra y fusiona skills entre versiones (en 0.11.0 borró `agentforce-secure` y
+  movió la seguridad al Modo C de `agentforce-test`). Si la lista no coincide con la tabla
+  de ruteo de `CLAUDE.md` §2, avisame y proponé la corrección.
 - **Nunca** uses `tools/install.sh` ni `install.py` de ese repo: copian
   `skills/agentforce-*` a `~/.claude/skills/` con los mismos nombres que las de proyecto
   y rompen el ruteo de CLAUDE.md §2.

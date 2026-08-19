@@ -25,6 +25,27 @@ dejate guiar.
 
 ---
 
+## Etapa común: abrir la bitácora
+
+Antes de la primera acción que toque la org, en `specs/<Trabajo>/`:
+
+1. Copiá `BITACORA.md` de la plantilla.
+2. Llená la cabecera: **alias de la org y si es sandbox o producción**. Verificalo de
+   verdad — el alias no lo dice, una org llamada `dev-cliente` puede ser producción:
+
+   ```powershell
+   sf org list --json      # isSandbox / isScratch / orgEdition
+   sf data query --json -q "SELECT IsSandbox, OrganizationType FROM Organization"
+   ```
+3. A partir de ahí, **cada comando que escribe en la org deja su fila**, escrita en el
+   momento, con el resultado real y con su columna de reversión.
+
+Regla completa en `CLAUDE.md` §5. Sin bitácora, un deploy que rompió algo es imposible de
+rastrear tres semanas después — y quien retome el trabajo (otra persona u otra sesión)
+arranca a ciegas.
+
+---
+
 # VÍA A — Agentes Agentforce
 
 ## A0 — Prueba de humo (una vez por org nueva)
@@ -156,6 +177,10 @@ sf agent activate --json --api-name <Developer_Name> -o <ALIAS>
 Publicar tampoco activa: paso 2 y paso 3 son distintos. Sin activar no hay preview por
 `--api-name` ni `sf agent test run`.
 
+> **Los tres comandos van a `BITACORA.md` como tres filas separadas**, cada una con su
+> resultado. El `publish` se anota como **IRREVERSIBLE**: una versión publicada no se
+> edita, y para cambiarla hay que crear otra.
+
 ### ⚠️ `Metadata retrieval failed` al publicar = falso negativo
 
 ```
@@ -229,11 +254,20 @@ que existan en la org, no inventados.
 ## A7 — Seguridad (no la saltees)
 
 ```
-/agentforce-adlc:agentforce-secure
+/agentforce-adlc:agentforce-test security <ALIAS> --agent <Developer_Name> --mode C2
 ```
 
 Red team OWASP LLM Top 10 contra el agente vivo, nota A–F. Menos de B → arreglar antes de
 que lo vea un usuario real.
+
+- **`agentforce-secure` ya no existe**: desde ADLC 0.11.0 la seguridad es el **Modo C** de
+  `agentforce-adlc:agentforce-test`. Ojo con el ruteo: para tests **funcionales** se usa
+  `agentforce-test` de sf-skills; para los de **seguridad**, el del plugin (`CLAUDE.md` §2).
+- **C1** (`--mode C1-author` / `C1-run`) escribe y deploya una suite de seguridad reusable
+  como `AiEvaluationDefinition` — sirve de regresión.
+- **C2** es el red team en vivo, con la nota A–F. Es el que va antes de dar por cerrado.
+- Genera casos adversariales solo **con tu confirmación explícita**, y verifica que la org
+  sea sandbox antes de sondear.
 
 ## A8 — Observar en producción
 
@@ -272,21 +306,41 @@ permission sets y no profiles, Flow antes que Apex cuando alcanza.
 - Apex: `sf apex test run --json --wait 10 --code-coverage` (≥ 75% para producción).
 - Lint del proyecto: `npm run lint` (LWC/Aura) si tocaste UI.
 
-## B3 — Deploy acotado
+## B3 — Deploy acotado (con las tres puertas de `CLAUDE.md` §3.2)
 
 ```powershell
-# primero validar sin deployar (dry-run):
+# 0. ¿QUÉ ORG ES? El alias no lo dice. Si no es sandbox, es producción.
+sf org list --json      # isSandbox / isScratch / orgEdition
+
+# 1. BACKUP de lo que vas a pisar (si no trae nada, es porque vas a crear, no a pisar)
+sf project retrieve start --json --metadata <mismos tipos> -o <ALIAS> `
+    --target-metadata-dir specs/<Nombre>/backup-<fecha>
+
+# 2. VALIDAR: corre el deploy entero y los tests, sin cambiar nada
 sf project deploy validate --json --metadata <tipos> -o <ALIAS>
-# después el deploy real, siempre acotado:
+
+# 3. EXPLICAR al usuario qué entra, qué pisa y qué puede romper -> ESPERAR SU OK
+
+# 4. DEPLOYAR (o `deploy quick -i <JOB_ID>` para promover lo ya validado)
 sf project deploy start --json --metadata CustomObject CustomField ApexClass Flow PermissionSet -o <ALIAS>
 ```
 
 Nunca `--source-dir force-app` a pelo. Antes de deployar, Claude te explica qué va a
 cambiar en la org — no aprobes sin entenderlo.
 
+Apenas termina el deploy, **su fila en `BITACORA.md`**: qué componentes entraron, el
+resultado real y el comando de reversión (`sf project delete source --metadata <tipos>`, o
+re-deployar el backup si pisaste algo). Si el deploy fue a **producción**, la fila tiene
+que decirlo.
+
+**Borrar algo es una acción aparte y necesita su propia pregunta**, aunque el usuario ya
+haya aprobado el deploy. Ver `CLAUDE.md` §3.2, Puerta 2.
+
 ## B4 — Verificar en la org
 
 - Correr los casos de prueba del PRD §6 a mano en la org.
 - Probar permisos con un usuario que **no** sea admin.
 - `sf org open` para revisar visualmente lo que se creó.
-- Actualizar `specs/<Nombre>/NOTES.md` con lo que quedó y lo que falta.
+- Actualizar `specs/<Nombre>/NOTES.md` con las decisiones y lo que falta.
+- Revisar que `specs/<Nombre>/BITACORA.md` tenga **una fila por cada cosa que se le hizo a
+  la org**, incluidos los cambios que hiciste vos a mano en Setup.

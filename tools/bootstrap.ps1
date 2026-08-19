@@ -117,6 +117,15 @@ if (Test-Path "force-app/main/default") {
     $issues += "force-app/main/default no existe"
 }
 
+# hook de bitacora (CLAUDE.md 5): settings.json + script
+if ((Test-Path ".claude/settings.json") -and (Test-Path "tools/log-sf.ps1")) {
+    Write-Host "  OK    hook de bitacora cableado" -ForegroundColor Green
+} else {
+    Write-Host "  FALTA hook de bitacora (.claude/settings.json / tools/log-sf.ps1)" -ForegroundColor Red
+    Write-Host "        sin el, los comandos sf no quedan registrados automaticamente" -ForegroundColor Yellow
+    $issues += "hook de bitacora ausente"
+}
+
 # duplicado agent/ (no debería existir — se eliminó, ver docs/DECISIONS.md)
 if (Test-Path "agent/skills") {
     Write-Host "  WARN  reapareció agent/skills/ (copia redundante de .agents/skills/)" -ForegroundColor Yellow

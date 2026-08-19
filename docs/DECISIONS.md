@@ -56,7 +56,7 @@ subagentes de ADLC — cosa que el file-copy hace a mano y frágilmente.
 
 ## ADR-3 — sf-skills es la librería primaria; ADLC aporta solo la pasada de seguridad
 
-**Decisión:** ver la tabla de ruteo en `CLAUDE.md` §1.
+**Decisión:** ver la tabla de ruteo en `CLAUDE.md` §2.
 
 Namespacear resuelve la colisión de *archivos*, pero no la de *triggering*: ambas skills
 describen "trabajar con archivos .agent" y las dos van a matchear. Sin una regla explícita,
@@ -77,13 +77,23 @@ Ese nivel de especificidad verificada es difícil de igualar, y es la librería 
 
 **Qué aporta ADLC que sf-skills no tiene:**
 
-- `agentforce-secure` — assessment OWASP LLM Top 10 sobre el agente vivo, con probes
-  adversariales y grading LLM-as-judge (A–F). No tiene equivalente en sf-skills.
+- **Assessment OWASP LLM Top 10** sobre el agente vivo, con probes adversariales y grading
+  A–F. No tiene equivalente en sf-skills. **Desde ADLC 0.11.0 no es una skill propia**: era
+  `agentforce-secure` y ahora es el **Modo C** de `agentforce-adlc:agentforce-test`
+  (C1 = suite deployable, C2 = red team en vivo). Verificado contra el plugin instalado el
+  2026-08-19: `skills/` solo contiene `agentforce-generate`, `agentforce-observe` y
+  `agentforce-test`.
 - Hook `PostToolUse` que dispara review de seguridad en cada escritura de `.agent`.
 - `scripts/discover.py` y `scripts/scaffold.py` como CLIs standalone.
 
 **Revisión pendiente:** si en algún momento ADLC supera a sf-skills en profundidad de referencias,
 invertir la tabla de ruteo. Chequear el `CHANGELOG.md` de ADLC cada tanto.
+
+**Lección de la actualización a 0.11.0:** ADLC movió toda la seguridad adentro de
+`agentforce-test` y borró `agentforce-secure`. El repo siguió mandando a una skill inexistente
+hasta que se verificó contra el plugin instalado. **Al correr `/actualizar-entorno`, no alcanza
+con `claude plugin update`: hay que mirar qué skills expone realmente el plugin** y ajustar la
+tabla de ruteo de `CLAUDE.md` §2 si cambiaron.
 
 ---
 
@@ -152,6 +162,37 @@ del repo.
 
 ---
 
+## ADR-8 — Bitácora append-only por trabajo
+
+**Decisión:** todo trabajo lleva `specs/<Trabajo>/BITACORA.md`: un registro append-only con
+una fila por cada acción que escribe en la org o cambia metadata deployable. La regla vive
+en `CLAUDE.md` §5, o sea en el archivo que Claude lee siempre — no en un doc opcional.
+
+**Problema que resuelve.** El repo es agnóstico de org y ADR-7 hace que el trabajo no se
+commitee: no hay historial de git de lo que se construyó. Sin bitácora, la única evidencia
+de qué se le hizo a una org queda en el scrollback de una sesión de Claude Code, que se
+pierde. Tres consecuencias concretas: no se puede revertir, no se puede auditar, y quien
+retome el trabajo (otra persona u otra sesión) arranca a ciegas.
+
+**Por qué archivo y no hook.** Un hook `PostToolUse` sobre Bash sería más confiable que una
+instrucción, pero no puede saber a qué trabajo pertenece la acción: el path de destino
+depende de `specs/<Trabajo>/`, que cambia por trabajo y no está en el entorno. Un hook
+escribiría a un log plano del repo y alguien tendría que repartirlo igual. Queda como
+mejora futura: hook que escribe crudo + Claude que lo consolida en la bitácora del trabajo.
+
+**Por qué separado de `NOTES.md`.** Son dos cosas con reglas opuestas: la bitácora es
+factual y no se edita nunca; NOTES es razonamiento y se corrige libremente. Mezclarlas hace
+que el registro pierda la propiedad que lo vuelve confiable — que nadie lo reescribió.
+
+**Columna "Reversión" obligatoria.** Es lo que separa un log de un registro útil. Obliga a
+pensar el deshacer **antes** de ejecutar, y hace visible lo irreversible (borrar un campo
+con datos, publicar una versión de agente) mientras todavía se puede frenar.
+
+**Consecuencia:** la bitácora es local como todo el trabajo (ADR-7). Al cerrar, se va con
+la carpeta a `_archive-trabajos/`. Es la pieza del archivo que más vale conservar.
+
+---
+
 ## Resuelto (histórico)
 
 ### Carpeta `agent/` duplicada — ELIMINADA (2026-07-27)
@@ -169,16 +210,23 @@ otra herramienta de IA, `npx skills forcedotcom/sf-skills --all` la regenera.
 
 ## Deuda técnica pendiente
 
-### 1. Symlinks de `.claude/skills/` no verificables desde el sandbox
+### ~~1. Symlinks de `.claude/skills/` rotos o ausentes~~ — RESUELTO (2026-08-19)
 
-Dan `Input/output error` leídos desde Linux; puede ser un artefacto del mount de Windows.
-**Acción:** `pwsh tools/bootstrap.ps1` en Windows los chequea. Si están rotos: activar Modo
-Desarrollador y re-correr `npx skills forcedotcom/sf-skills --all`.
+`pwsh tools/link-skills.ps1` los recrea desde `.agents/skills/` usando *junctions* en
+Windows: no requiere Modo Desarrollador ni re-descargar las skills. `bootstrap.ps1` verifica
+que resuelvan y apunta al script si no.
 
-### 2. Git no inicializado
+### ~~2. Git no inicializado~~ — RESUELTO
 
-`git init; git add .; git commit -m "setup inicial del workspace"`. Verificado que
-`.gitignore` no excluye `.agents/` ni `skills-lock.json`.
+Repo inicializado con remoto en GitHub. `.gitignore` no excluye `.agents/` ni
+`skills-lock.json`.
+
+### 3. El cheatsheet cubre solo la vía A
+
+`docs/cli-cheatsheet.md` son 184 líneas 100% de Agentforce. No hay comandos verificados de
+vía B (objetos, campos, Apex, Flows, deploy general, borrado de metadata). Quien trabaje
+metadata general depende de las skills de sf-skills, sin la capa de trampas verificadas que
+sí tiene la vía A.
 
 ### ~~3. `.mcp.json` pendiente de crear~~ — RESUELTO (2026-07-27)
 
