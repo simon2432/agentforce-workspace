@@ -257,7 +257,8 @@ agentforce-workspace/
 │   └── _TEMPLATE-general/
 ├── force-app/main/default/  ← metadata deployable (el artefacto)
 ├── .agents/skills/        ← sf-skills, 94 skills (versionadas, ver skills-lock.json)
-└── .claude/skills/        ← symlinks a .agents/skills/ (NO son copias)
+└── .claude/skills/        ← enlaces a .agents/skills/ (NO son copias; gitignoreados,
+                             se recrean con `pwsh tools/link-skills.ps1`)
 ```
 
 **Separación deliberada:** `specs/<Trabajo>/` guarda el *pensamiento*; `force-app/` guarda el

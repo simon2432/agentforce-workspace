@@ -14,11 +14,26 @@ idea → PRD aprobado ──┤
 
 ## Si es tu primera vez
 
-1. `npm install` y después `pwsh tools/bootstrap.ps1` — te dice qué falta instalar y cómo
-   (Node, Salesforce CLI, Claude Code, Python, el plugin de seguridad).
-2. Conectá una org: `sf org login web --alias <ALIAS>` y `sf config set target-org <ALIAS>`.
-3. Abrí Claude Code en esta carpeta y corré `/actualizar-entorno` (skills al día). Reiniciá.
-4. Pegá el prompt de **[templates/INICIAR.md](templates/INICIAR.md)**.
+**En Windows, antes de clonar** (una sola vez por máquina):
+
+```powershell
+git config --global core.longpaths true
+```
+
+Sin eso el clon puede fallar a la mitad con `Filename too long` y dejarte una carpeta casi
+vacía. Detalle y recuperación en [SETUP.md](SETUP.md).
+
+Ya clonado, en orden:
+
+1. `npm install` — herramientas de formato/lint del proyecto.
+2. `pwsh tools/link-skills.ps1` — **imprescindible**: enlaza las 94 skills para que Claude
+   Code las vea. No descarga nada.
+3. `pwsh tools/bootstrap.ps1` — te dice qué falta instalar y cómo (Node, Salesforce CLI,
+   Claude Code, Python, el plugin de seguridad).
+   *(Si no tenés `pwsh`, usá `powershell` — los scripts andan en las dos versiones.)*
+4. Conectá una org: `sf org login web --alias <ALIAS>` y `sf config set target-org <ALIAS>`.
+5. Abrí Claude Code en esta carpeta, reinicialo, y corré `/actualizar-entorno` (skills al día).
+6. Pegá el prompt de **[templates/INICIAR.md](templates/INICIAR.md)**.
    Claude te guía por todo el resto — no necesitás saber programar.
 
 ## Mapa del repo
@@ -37,7 +52,8 @@ idea → PRD aprobado ──┤
 | 94 skills oficiales de Salesforce (versionadas) | `.agents/skills/` |
 
 > `.claude/skills/` no es una copia: son accesos directos a `.agents/skills/` para que
-> Claude Code las encuentre.
+> Claude Code las encuentre. Son por-máquina (gitignoreados), así que **un clon nuevo
+> arranca sin ellos**: los crea `pwsh tools/link-skills.ps1`.
 
 ## Toolchain
 

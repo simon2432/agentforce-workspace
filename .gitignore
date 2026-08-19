@@ -74,6 +74,7 @@ specs/*
 # Todo el metadata construido (agentes, Apex, Flows, objetos, permission sets,
 # LWC, etc.) se despliega a la org — no se commitea en este repo.
 force-app/main/default/*
+!force-app/main/default/.gitkeep
 
 # Scripts de ejemplo genéricos del repo base sí quedan; scripts ad-hoc de un
 # trabajo puntual (seeds de datos, etc.) no.

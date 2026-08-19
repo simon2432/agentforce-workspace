@@ -12,3 +12,6 @@ package.xml
 **/__tests__/**
 
 node_modules/
+
+# marcador para que force-app/ exista en un clon nuevo (no es metadata)
+**/.gitkeep

@@ -1,0 +1,4 @@
+Marcador. Mantiene force-app/main/default/ en el repo aunque su contenido esté
+gitignoreado: sfdx-project.json declara "force-app" como package directory y los
+comandos `sf project ...` fallan con MissingPackageDirectoryError si la carpeta
+no existe en un clon nuevo. No borrar.

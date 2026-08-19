@@ -13,7 +13,8 @@ separado y no encadenes: si algo falla, frená y explicámelo.
 - Mostrame `git diff --stat skills-lock.json` y resumime en lenguaje simple qué cambió,
   qué es nuevo y qué desapareció.
 - Verificá que `.claude/skills/agentforce-generate/SKILL.md` sea legible. Si no, los
-  symlinks están rotos: en Windows hace falta Modo Desarrollador activado.
+  enlaces están rotos o faltan (pasa siempre en un clon nuevo): arreglalo con
+  `pwsh tools/link-skills.ps1`. No requiere Modo Desarrollador.
 
 ## 2. Plugin agentforce-adlc (global)
 
