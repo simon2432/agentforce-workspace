@@ -30,13 +30,19 @@ dejate guiar.
 Antes de la primera acción que toque la org, en `specs/<Trabajo>/`:
 
 1. Copiá `BITACORA.md` de la plantilla.
-2. Llená la cabecera: **alias de la org y si es sandbox o producción**. Verificalo de
-   verdad — el alias no lo dice, una org llamada `dev-cliente` puede ser producción:
+2. Llená la cabecera: **alias de la org y su tipo**. Verificalo de verdad — el alias no lo
+   dice, una org llamada `dev-cliente` puede ser producción:
 
    ```powershell
-   sf org list --json      # isSandbox / isScratch / orgEdition
-   sf data query --json -q "SELECT IsSandbox, OrganizationType FROM Organization"
+   pwsh tools/org.ps1              # lista las orgs con su tipo y marca la activa
+   pwsh tools/org.ps1 <ALIAS>      # cambia la activa y confirma el tipo contra la org
    ```
+
+   Sandbox o scratch (lo habitual): seguís normal. Producción: ver `CLAUDE.md` §3.2 Puerta 3.
+
+   El repo **no deja ninguna org fija**: cada trabajo elige la suya al arrancar y la libera
+   al cerrar con `pwsh tools/org.ps1 -Clear`. Fijate en el "Origen" que imprime el listado:
+   si dice *default global*, este proyecto todavía no eligió — elegí antes de seguir.
 3. A partir de ahí, **cada comando que escribe en la org deja su fila**, escrita en el
    momento, con el resultado real y con su columna de reversión.
 
@@ -309,8 +315,8 @@ permission sets y no profiles, Flow antes que Apex cuando alcanza.
 ## B3 — Deploy acotado (con las tres puertas de `CLAUDE.md` §3.2)
 
 ```powershell
-# 0. ¿QUÉ ORG ES? El alias no lo dice. Si no es sandbox, es producción.
-sf org list --json      # isSandbox / isScratch / orgEdition
+# 0. ¿QUÉ ORG ES? El alias no lo dice.
+pwsh tools/org.ps1      # tipo de cada org conectada + cuál está activa
 
 # 1. BACKUP de lo que vas a pisar (si no trae nada, es porque vas a crear, no a pisar)
 sf project retrieve start --json --metadata <mismos tipos> -o <ALIAS> `

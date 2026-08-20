@@ -145,7 +145,27 @@ Write-Host "`n=== C. Org ===" -ForegroundColor Cyan
 try {
     $t = sf config get target-org --json 2>&1 | ConvertFrom-Json
     $val = $t.result[0].value
-    if ($val) { Write-Host "  OK    target-org: $val" -ForegroundColor Green }
+    if ($val) {
+        # el alias no dice el tipo: lo resolvemos contra el registro de auth
+        $tipo = "?"
+        try {
+            $lst = sf org list --json 2>$null | ConvertFrom-Json
+            foreach ($g in $lst.result.PSObject.Properties) {
+                if ($g.Value -isnot [Array]) { continue }
+                foreach ($o in $g.Value) {
+                    if ($o.alias -eq $val) {
+                        $tipo = if ($o.isScratch) { "scratch" } elseif ($o.isSandbox) { "sandbox" } else { "PRODUCCION" }
+                    }
+                }
+            }
+        } catch { }
+        if ($tipo -eq "PRODUCCION") {
+            Write-Host "  OK    target-org: $val" -ForegroundColor Green
+            Write-Host "  AVISO esa org es PRODUCCION -> pwsh tools/org.ps1 para cambiarla" -ForegroundColor Red
+        } else {
+            Write-Host "  OK    target-org: $val ($tipo)" -ForegroundColor Green
+        }
+    }
     else {
         Write-Host "  ---   sin target-org (esperable en un clon nuevo)" -ForegroundColor Yellow
         Write-Host "        sf org login web --alias <ALIAS>; sf config set target-org <ALIAS>" -ForegroundColor DarkGray

@@ -1,4 +1,4 @@
-b# CLAUDE.md — agentforce-workspace
+# CLAUDE.md — agentforce-workspace
 
 Repo plantilla, **agnóstico de org**, para todo tipo de trabajo Salesforce asistido por IA:
 agentes Agentforce, objetos, Flows, Apex, LWC, permisos, integraciones, Data Cloud.
@@ -6,6 +6,40 @@ Nada acá adentro debe hardcodear un alias de org, un ID de retriever ni un dato
 
 El usuario puede no saber programar. Explicá en lenguaje simple, avanzá etapa por etapa,
 y mostrá el resultado de cada etapa antes de seguir.
+
+---
+
+## Chequeo de arranque — antes de la primera acción de cualquier trabajo
+
+**Hacelo siempre, aunque el usuario vaya directo al grano ("usemos este repo para
+desarrollar X").** Son tres preguntas y evitan las tres formas de arruinar un trabajo entero.
+
+### 1. ¿Ves las skills?
+
+Confirmá que podés leer `.claude/skills/agentforce-generate/SKILL.md`. Si no podés:
+
+> **PARÁ. No empieces a construir.** En un clon nuevo `.claude/skills/` **no existe** — son
+> enlaces por máquina, gitignoreados a propósito. Esta sesión arrancó **sin ninguna de las
+> 94 skills**, y construir así significa inventar sintaxis de Agent Script y de metadata:
+> exactamente lo que prohíbe §1.
+>
+> Decíselo al usuario en una línea, corré `pwsh tools/link-skills.ps1`, y **pedile que
+> reinicie Claude Code**. Las skills se cargan al arranque: correr el script a mitad de
+> sesión no las trae. No sigas hasta que reinicie.
+
+### 2. ¿Qué org es?
+
+`pwsh tools/org.ps1`. Si no hay ninguna activa, o si el **Origen** dice *default global*
+(o sea, este proyecto todavía no eligió), hacé que el usuario elija antes de seguir.
+Sandbox o scratch: flujo normal. Producción: §3.2 Puerta 3.
+
+### 3. ¿Hay bitácora?
+
+Si el trabajo ya tiene su carpeta en `specs/`, abrí su `BITACORA.md` y leé lo último que se
+hizo. Si es nuevo, copiala de la plantilla al crear la carpeta (§5).
+
+Si el usuario pegó el prompt de `templates/INICIAR.md`, este chequeo ya viene incluido y más
+detallado — no lo repitas, seguí ese.
 
 ---
 
@@ -280,23 +314,45 @@ Mismo peso que la Puerta 1. Cuenta como borrado:
 **Ante la duda, no borres.** Casi siempre hay una alternativa reversible: desactivar el
 Flow, sacar el campo del layout, despublicar en vez de eliminar. Proponé esa primero.
 
-### Puerta 3 — Saber si es sandbox o producción, siempre
+### Puerta 3 — Saber de qué tipo es la org, siempre
 
-**El alias no dice nada.** Una org llamada `dev-cliente` puede ser producción. Antes de la
-primera escritura en una org, verificalo:
+**El alias no dice nada.** Una org llamada `dev-cliente` puede ser producción, y una llamada
+`prod-backup` puede ser una sandbox. Antes de la primera escritura, verificalo:
 
 ```powershell
-sf org list --json          # mirá isSandbox, isScratch, orgEdition
-sf data query --json -q "SELECT IsSandbox, OrganizationType, InstanceName FROM Organization"
+pwsh tools/org.ps1          # lista las orgs con su tipo y marca la activa
 ```
 
-Si `IsSandbox` es `false` y no es scratch, **es PRODUCCIÓN**. A partir de ahí:
+Si preferís los comandos crudos: `sf org list --json` (mirá `isSandbox` / `isScratch`) y,
+como fuente autoritativa, `sf data query --json -q "SELECT IsSandbox, OrganizationType FROM Organization"`.
+
+**Sandbox, scratch o developer — que es el caso habitual en este repo:** flujo normal. Las
+Puertas 1 y 2 siguen valiendo (validar antes de deployar, preguntar antes de borrar), pero
+no hace falta ceremonia extra. Anotá el tipo en la cabecera de `BITACORA.md` y seguí.
+
+**Producción** (`IsSandbox: false` y no es scratch) — recién acá se agrega todo lo demás:
 
 - Decíselo al usuario **con esa palabra**, antes de cada acción que escriba.
 - OK explícito **por cada deploy**, no uno solo para todo el trabajo.
-- Usá `deploy validate` + `deploy quick` en vez de `deploy start` directo.
+- `deploy validate` + `deploy quick` en vez de `deploy start` directo.
 - Nada de datos de prueba, nada de Apex anónimo que escriba, ningún borrado sin backup.
-- Anotá el tipo de org en la cabecera de `BITACORA.md`.
+
+**La org se elige por trabajo, no de una vez para siempre.** El repo **no fija ninguna**:
+cada trabajo arranca eligiéndola y la libera al cerrar.
+
+```powershell
+pwsh tools/org.ps1 <ALIAS>    # al arrancar el trabajo: la fija a nivel proyecto
+pwsh tools/org.ps1 -Clear     # al cerrarlo: el proyecto deja de fijar org
+```
+
+El valor vive en `.sf/` (gitignoreado, ADR-4), así que cada clon puede apuntar a un cliente
+distinto. El listado te dice **de dónde sale** la org activa: si la fijó este proyecto o si
+es el default global de la máquina — no es lo mismo, y confundirlos es cómo se termina
+deployando en la org equivocada.
+
+Si el usuario nombra una org distinta a la activa, **no la cambies por tu cuenta**: mostrale
+`pwsh tools/org.ps1` y que elija, o usá `-o <ALIAS>` para esa acción puntual sin tocar la
+activa.
 
 ---
 
@@ -422,7 +478,7 @@ agentforce-workspace/
 ├── docs/                  ← DECISIONS.md (ADRs), cli-cheatsheet.md
 ├── templates/             ← INICIAR.md, prd-agente.md, prd-general.md, testSpec-template.yaml
 ├── .claude/settings.json  ← hook que registra los comandos sf (bitácora, §5)
-├── tools/                 ← bootstrap.ps1, link-skills.ps1, log-sf.ps1
+├── tools/                 ← bootstrap.ps1, link-skills.ps1, log-sf.ps1, org.ps1
 ├── specs/                 ← 1 carpeta por trabajo (el pensamiento)
 │   ├── _TEMPLATE-agente/    PRD.md · BITACORA.md · NOTES.md · testSpec.yaml
 │   └── _TEMPLATE-general/   PRD.md · BITACORA.md · NOTES.md

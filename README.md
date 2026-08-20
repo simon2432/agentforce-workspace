@@ -32,9 +32,11 @@ Ya clonado, en orden:
    Claude Code, Python, el plugin de seguridad).
    *(Si no tenés `pwsh`, usá `powershell` — los scripts andan en las dos versiones.)*
 4. Conectá una org: `sf org login web --alias <ALIAS>` y `sf config set target-org <ALIAS>`.
-5. Abrí Claude Code en esta carpeta, reinicialo, y corré `/actualizar-entorno` (skills al día).
+5. **Recién ahora** abrí Claude Code en esta carpeta. El orden importa: las skills se cargan
+   al arrancar, así que si lo abrís antes del paso 2 no ve ninguna de las 94.
 6. Pegá el prompt de **[templates/INICIAR.md](templates/INICIAR.md)**.
-   Claude te guía por todo el resto — no necesitás saber programar.
+   Claude te guía por todo el resto — no necesitás saber programar. Al arrancar te va a
+   ofrecer `/actualizar-entorno` para dejar las skills al día.
 
 ## Mapa del repo
 

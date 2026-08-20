@@ -162,10 +162,30 @@ Nada de esto se commitea. Son credenciales de máquina.
 
 ### Opción 1 — Org propia (dev, sandbox, cliente)
 
+**El comando NO es el mismo para sandbox que para producción.** `sfdx-project.json` declara
+`sfdcLoginUrl: https://login.salesforce.com`, así que `sf org login web` a secas te manda
+**siempre a producción**. Para una sandbox hay que pasar `--instance-url`, que pisa ese valor:
+
 ```powershell
-sf org login web --alias <ALIAS> 
+# SANDBOX (lo habitual acá)
+sf org login web --alias <ALIAS> --instance-url https://test.salesforce.com
+# o con My Domain, que es lo que recomienda Salesforce:
+sf org login web --alias <ALIAS> `
+    --instance-url https://<MyDomain>--<NombreSandbox>.sandbox.my.salesforce.com
+
+# PRODUCCIÓN
+sf org login web --alias <ALIAS>
+
+# verificar quién quedó logueado
 sf org display user --json
 ```
+
+> El usuario de una sandbox es `tuusuario@dominio.com.<NombreSandbox>` — el sufijo va
+> incluido. Si lo escribís sin sufijo, el login falla y parece un problema de contraseña.
+
+**Poné en el alias de qué tipo es** (`<cliente>-uat`, `<cliente>-dev`, `<cliente>-PROD`) para
+no adivinar después.
+Igual nunca confíes solo en el nombre: verificá con `pwsh tools/org.ps1`.
 
 Habilitar en Setup (una vez por org):
 
@@ -193,14 +213,30 @@ Pedile a Claude Code:
 
 Tiene fecha de expiración (`expires_at`). **No la uses para trabajo de cliente.**
 
-### Setear la org activa
+### Setear la org activa — usá `tools/org.ps1`
 
 ```powershell
-sf config set target-org <ALIAS>     # scope proyecto
+pwsh tools/org.ps1              # lista las orgs conectadas CON SU TIPO y marca la activa
+pwsh tools/org.ps1 <ALIAS>      # la deja activa (scope proyecto) y te confirma qué tipo es
+pwsh tools/org.ps1 -Clear       # el proyecto deja de fijar org (al cerrar un trabajo)
+```
+
+Al cambiar de org, el script consulta la org de verdad
+(`SELECT IsSandbox FROM Organization`) en vez de confiar en el alias, y si es **producción**
+te lo dice en rojo con las reglas que aplican. Es la Puerta 3 de `CLAUDE.md` §3.2 hecha
+herramienta.
+
+Equivalente a mano, si preferís:
+
+```powershell
+sf config set target-org <ALIAS>     # scope proyecto (queda en .sf/, gitignoreado)
 sf config get target-org --json      # verificar
 ```
 
-Todo el resto del repo asume que esto está seteado y **nunca** hardcodea el alias.
+Trabajar con varias orgs a la vez es normal: el scope es **por proyecto**, así que cada
+carpeta clonada puede apuntar a un cliente distinto. Todo el resto del repo lee la org
+activa y **nunca** hardcodea el alias (ADR-4). Para una acción puntual contra otra org sin
+cambiar la activa, pasá `-o <ALIAS>` en ese comando.
 
 ---
 
