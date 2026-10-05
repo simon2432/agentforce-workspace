@@ -11,13 +11,18 @@ Copiá esta carpeta como `specs/<NombreAgente>/` para cada agente nuevo.
 
 ## Archivos
 
-| Archivo | Qué es |
-|---|---|
-| `PRD.md` | Especificación. Generado con `templates/prd-agente.md`. Fuente de verdad del comportamiento. |
-| `testSpec.yaml` | Casos de prueba. Se compila con `sf agent test create`. |
-| `utterances.md` | Frases de prueba para el loop rápido de preview. |
-| `BITACORA.md` | **Registro append-only de toda acción sobre la org.** Obligatorio: `CLAUDE.md` §5. |
-| `NOTES.md` | Razonamiento: qué se probó, qué falló, qué se decidió y por qué. |
+La plantilla trae `README.md`, `BITACORA.md` y `NOTES.md`. El resto se crea durante el trabajo.
+
+| Archivo | Qué es | De dónde sale |
+|---|---|---|
+| `PRD.md` | Especificación. Fuente de verdad del comportamiento. | Lo genera `templates/prd-agente.md` |
+| `testSpec.yaml` | Casos de prueba. Se compila con `sf agent test create`. | Copia de `templates/testSpec-template.yaml` |
+| `utterances.md` | *(opcional)* Frases de prueba para el loop rápido de preview. | Se crea a mano si hace falta |
+| `BITACORA.md` | **Registro append-only de toda acción sobre la org.** Obligatorio: `CLAUDE.md` §5. | Viene en la plantilla |
+| `NOTES.md` | Razonamiento: qué se probó, qué falló, qué se decidió y por qué. | Viene en la plantilla |
+
+Todo archivo de este trabajo (versiones del `.agent`, diffs, prompts, scripts) va en esta
+carpeta, que está gitignoreada. **Nunca** dentro de `.agents/skills/`, que sí se commitea.
 
 El artefacto deployable **no** vive acá: está en
 `force-app/main/default/aiAuthoringBundles/<Developer_Name>/`.

@@ -3,6 +3,19 @@ name: platform-apex-logs-debug
 description: "Salesforce debug log analysis and troubleshooting with 100-point scoring. TRIGGER when: user analyzes debug logs, hits governor limits, reads stack traces, or touches .log files from Salesforce orgs. DO NOT TRIGGER when: running Apex tests (use platform-apex-test-run), generating or fixing Apex code (use platform-apex-generate), or Agentforce session tracing (use agentforce-observe)."
 metadata:
   version: "1.1"
+  domains: ["Platform"]
+  relatedSkills:
+    - "agentforce-observe"
+    - "platform-apex-generate"
+    - "platform-apex-test-run"
+    - "platform-data-manage"
+    - "platform-metadata-deploy"
+    - "platform-soql-query"
+  cliTools:
+    - tool: ["sf"]
+      semver: ">=2.0.0"
+    - tool: ["jq"]
+      semver: ">=1.6.0"
 ---
 
 # platform-apex-logs-debug: Salesforce Debug Log Analysis & Troubleshooting

@@ -26,14 +26,16 @@ vacía. Detalle y recuperación en [SETUP.md](SETUP.md).
 Ya clonado, en orden:
 
 1. `npm install` — herramientas de formato/lint del proyecto.
-2. `pwsh tools/link-skills.ps1` — **imprescindible**: enlaza las 94 skills para que Claude
+2. `pwsh tools/link-skills.ps1` — **imprescindible**: enlaza las skills para que Claude
    Code las vea. No descarga nada.
 3. `pwsh tools/bootstrap.ps1` — te dice qué falta instalar y cómo (Node, Salesforce CLI,
    Claude Code, Python, el plugin de seguridad).
    *(Si no tenés `pwsh`, usá `powershell` — los scripts andan en las dos versiones.)*
-4. Conectá una org: `sf org login web --alias <ALIAS>` y `sf config set target-org <ALIAS>`.
+4. Conectá una org: `sf org login web --alias <ALIAS>` (para una **sandbox** agregá
+   `--instance-url https://test.salesforce.com`, ver [SETUP.md](SETUP.md) Parte C) y
+   elegila con `pwsh tools/org.ps1 <ALIAS>`.
 5. **Recién ahora** abrí Claude Code en esta carpeta. El orden importa: las skills se cargan
-   al arrancar, así que si lo abrís antes del paso 2 no ve ninguna de las 94.
+   al arrancar, así que si lo abrís antes del paso 2 no ve ninguna.
 6. Pegá el prompt de **[templates/INICIAR.md](templates/INICIAR.md)**.
    Claude te guía por todo el resto — no necesitás saber programar. Al arrancar te va a
    ofrecer `/actualizar-entorno` para dejar las skills al día.
@@ -51,7 +53,7 @@ Ya clonado, en orden:
 | Meta-prompts de PRD (agente / general) | [templates/](templates/) |
 | Un trabajo = una carpeta (PRD, bitácora, notas, tests) | [specs/](specs/) |
 | Metadata deployable | `force-app/main/default/` |
-| 94 skills oficiales de Salesforce (versionadas) | `.agents/skills/` |
+| Skills oficiales de Salesforce (versionadas, lista en `skills-lock.json`) | `.agents/skills/` |
 
 > `.claude/skills/` no es una copia: son accesos directos a `.agents/skills/` para que
 > Claude Code las encuentre. Son por-máquina (gitignoreados), así que **un clon nuevo
@@ -59,8 +61,9 @@ Ya clonado, en orden:
 
 ## Toolchain
 
-- **[forcedotcom/sf-skills](https://github.com/forcedotcom/sf-skills)** — 94 skills oficiales
-  que cubren toda la plataforma. Versionadas en `.agents/skills/`, pinneadas en `skills-lock.json`.
+- **[forcedotcom/sf-skills](https://github.com/forcedotcom/sf-skills)** — skills oficiales
+  que cubren toda la plataforma (251 al 2026-10-05). Versionadas en `.agents/skills/`,
+  pinneadas en `skills-lock.json`.
 - **[agentforce-adlc](https://github.com/SalesforceAIResearch/agentforce-adlc)** — plugin de
   Claude Code. Se usa **solo** para la pasada de seguridad: `agentforce-adlc:agentforce-test`
   en Modo C (red team OWASP de agentes).

@@ -19,6 +19,9 @@ Copiá esta carpeta como `specs/<NombreTrabajo>/` para cada trabajo general de S
 
 El metadata deployable **no** vive acá: está en `force-app/main/default/`.
 
+Todo otro archivo de este trabajo (scripts, exports, notas sueltas) va en esta carpeta, que
+está gitignoreada. **Nunca** dentro de `.agents/skills/`, que sí se commitea.
+
 ## Checklist
 
 - [ ] Org confirmada con `sf org list --json` y anotada en `BITACORA.md`

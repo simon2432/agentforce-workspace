@@ -3,18 +3,19 @@ name: data360-code-extension-generate
 description: "Develop and deploy Data Cloud Code Extensions using SF CLI plugin. Use this skill when creating custom Python transformations for Data Cloud, deploying code extensions, or testing data transformations. Supports init, run, scan, and deploy operations."
 metadata:
   version: "1.0"
+  domains: ["Data 360", "Developer Experience"]
   relatedSkills:
     - "data360-schema-get"
   cliTools:
-    - tool: ["sf"]
-      semver: ">=2.0.0"
-    - tool: ["pip"]
-      semver: ">=21.0.0"
-    - tool: ["python3"]
-      semver: ">=3.11.0"
     - tool: ["docker"]
       semver: ">=20.0.0"
-    - tool: ["git"]
+    - tool: ["pip"]
+      semver: ">=23.0.0"
+    - tool: ["python"]
+      semver: ">=3.11.0"
+    - tool: ["python3"]
+      semver: ">=3.11.0"
+    - tool: ["sf"]
       semver: ">=2.0.0"
 ---
 

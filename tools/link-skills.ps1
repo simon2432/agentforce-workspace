@@ -2,7 +2,7 @@
 #
 #   pwsh tools/link-skills.ps1
 #
-# Por qué existe: las 94 skills viven versionadas en .agents/skills/, pero Claude Code
+# Por qué existe: las skills viven versionadas en .agents/skills/, pero Claude Code
 # las busca en .claude/skills/. Esos enlaces son POR MÁQUINA (gitignoreados: en Windows
 # un symlink clonado sin core.symlinks queda como archivo de texto roto), así que un clon
 # nuevo arranca sin ninguna skill visible hasta correr esto.
