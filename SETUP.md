@@ -118,15 +118,20 @@ te recuerda reiniciar Claude Code.
 Claude te lo ofrezca solo. Agent Script cambia rápido: con skills viejas, Claude escribe
 sintaxis que ya no compila.
 
-> **Por qué no es automático:** `npx skills update` solo trackea instalaciones globales
-> (`-g`), no las de proyecto. Y mejor así: el comando te muestra el diff de
+> **Por qué no es automático:** a propósito. El comando te muestra el diff de
 > `skills-lock.json` antes de commitear, en vez de que las skills cambien abajo de tus
-> pies en medio de un trabajo.
+> pies en medio de un trabajo. (Las versiones recientes del CLI de skills traen
+> `npx skills update -p` para skills de proyecto, pero el repo no lo usa: el flujo probado
+> es el de `/actualizar-entorno`, que además limpia las skills que Salesforce retira.)
 
-> Las 94 skills se conservan completas a propósito: este repo sirve para **todo** tipo de
-> trabajo Salesforce, no solo agentes. El instalador también genera symlinks en
-> `.claude/skills/` (así las encuentra Claude Code) — no son copias, no las toques a mano.
-> En Windows los symlinks requieren **Modo Desarrollador** activado.
+> Las skills se conservan completas a propósito (251 al 2026-10-05): este repo sirve para
+> **todo** tipo de trabajo Salesforce, no solo agentes.
+>
+> **Ojo con el instalador en Windows:** sin Modo Desarrollador no puede crear symlinks, así
+> que en vez de actualizar `.agents/skills/` deja **copias** en `.claude/skills/`. Por eso
+> `/actualizar-entorno` mueve esas copias a `.agents/skills/` y después recrea los enlaces
+> con `link-skills.ps1`. No lo hagas a mano salteando ese paso: las skills se verían
+> actualizadas en Claude Code pero el repo seguiría con las viejas.
 
 ### MCP de docs de Salesforce
 

@@ -51,9 +51,10 @@ $RECYCLE.BIN/
 # (ver docs/DECISIONS.md ADR-1). Tampoco .mcp.json ni .claude/commands/: se
 # comparten con el equipo.
 
-# Los symlinks de .claude/skills/ son por-máquina (en Windows dependen de Modo
-# Desarrollador y core.symlinks; clonados sin eso quedan como archivos de texto
-# rotos). Se regeneran con /actualizar-entorno o npx skills.
+# Los enlaces de .claude/skills/ son por-máquina (un symlink clonado en Windows
+# sin core.symlinks queda como archivo de texto roto). Se regeneran con
+# pwsh tools/link-skills.ps1 (usa junctions en Windows: no requiere Modo
+# Desarrollador).
 .claude/skills/
 
 # Log crudo del hook de bitácora (tools/log-sf.ps1). Es respaldo por trabajo:

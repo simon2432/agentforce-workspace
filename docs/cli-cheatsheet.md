@@ -17,9 +17,10 @@ claude plugin list
 ## Org
 
 ```powershell
-sf org login web --alias <ALIAS>
+sf org login web --alias <ALIAS> --instance-url https://test.salesforce.com   # SANDBOX
+sf org login web --alias <ALIAS>                                                # PRODUCCIÓN (login.salesforce.com)
 sf org display user --json
-sf config set target-org <ALIAS>
+pwsh tools/org.ps1 <ALIAS>          # fija la org del proyecto y confirma su tipo contra la org
 sf config get target-org --json
 sf org assign permset --json --name <PermSetName>
 sf org assign permset --json --name <PermSetName> --on-behalf-of user@example.com
@@ -167,9 +168,14 @@ Retrieve con `AiAuthoringBundle:`, **no** con `Agent:`.
 ## Skills
 
 ```powershell
-npx skills forcedotcom/sf-skills --all     # refrescar (revisar diff de skills-lock.json antes de commitear)
+npx skills add forcedotcom/sf-skills -l    # listar las del repo original, sin instalar
 claude plugin update agentforce-adlc@agentforce-adlc
+pwsh tools/link-skills.ps1                 # recrear los enlaces de .claude/skills/
 ```
+
+Para actualizar sf-skills usá **`/actualizar-entorno`**, no el instalador a mano: nunca con
+`--all` (instala para todos los agentes) y en Windows hay que mover las copias que deja en
+`.claude/skills/` a `.agents/skills/`. El paso a paso está en ese comando.
 
 ## Costos por operación
 

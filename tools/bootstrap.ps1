@@ -81,7 +81,7 @@ if (Test-Path ".agents/skills") {
     $n = (Get-ChildItem ".agents/skills" -Directory).Count
     Write-Host "  OK    sf-skills: $n skills en .agents/skills/" -ForegroundColor Green
 } else {
-    Write-Host "  FALTA .agents/skills -> npx skills forcedotcom/sf-skills --all" -ForegroundColor Red
+    Write-Host "  FALTA .agents/skills -> clon incompleto: git restore --source=HEAD :/ (ver SETUP.md)" -ForegroundColor Red
     $issues += "sf-skills"
 }
 

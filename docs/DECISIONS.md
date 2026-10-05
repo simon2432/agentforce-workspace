@@ -6,8 +6,14 @@ Por qué el repo está armado así. Si algo de acá cambia, actualizá el ADR en
 
 ## ADR-1 — sf-skills a nivel proyecto y versionado en git
 
-**Decisión:** las 94 skills de `forcedotcom/sf-skills` viven en `.agents/skills/`, se commitean,
-y quedan pinneadas por hash en `skills-lock.json`.
+**Decisión:** las skills de `forcedotcom/sf-skills` viven en `.agents/skills/`, se commitean,
+y quedan pinneadas por hash en `skills-lock.json` (94 al 2026-07-27; 251 al 2026-10-05,
+versión 1.59.0 del repo original).
+
+**Regla que se desprende:** `.agents/skills/` contiene **solo** skills de sf-skills. Nada de
+un trabajo puntual se guarda ahí adentro: como la carpeta se commitea entera, cualquier
+archivo de un trabajo terminaría en GitHub (choca con ADR-7). Ya pasó una vez y se
+detectó antes de commitear (2026-10-05).
 
 **Alternativa descartada:** instalación global (`npx skills -g`).
 
@@ -16,7 +22,7 @@ y quedan pinneadas por hash en `skills-lock.json`.
 | | Proyecto + commiteado (elegido) | Global |
 |---|---|---|
 | Reproducibilidad | Clonás y tenés las versiones exactas | Cada máquina puede tener otra versión |
-| Auto-update | ❌ manual (`npx skills update` solo trackea globales) | ✅ automático |
+| Auto-update | ❌ manual, con `/actualizar-entorno` | ✅ automático |
 | Peso del repo | ~decenas de MB | 0 |
 | Onboarding de un compañero | `git clone` y listo | tiene que instalar aparte |
 
@@ -64,21 +70,22 @@ la elección es no determinística. Por eso la regla vive en `CLAUDE.md`, que Cl
 
 **Por qué sf-skills gana el rol primario** — evaluado leyendo el contenido real, no el README:
 
-`agentforce-generate` de sf-skills trae 24 archivos de referencia, entre ellos:
+`agentforce-generate` de sf-skills trae 52 archivos de referencia (eran 24 en julio), entre ellos:
 
 - `agent-metadata-and-lifecycle.md` — semántica exacta de deploy vs publish, con las trampas
 - `production-gotchas.md` — tabla de consumo de créditos por operación
 - `feature-validity.md` — matriz de qué propiedad funciona en qué contexto, con casos marcados
   explícitamente como "no testeado"
 - `known-issues.md` — tracker de bugs **abiertos de plataforma** con workarounds
-- 19 archivos `.agent` de ejemplo en `assets/`
+- 24 archivos `.agent` de ejemplo en `assets/agents/` y `assets/patterns/`
 
 Ese nivel de especificidad verificada es difícil de igualar, y es la librería oficial de Salesforce.
 
 **Qué aporta ADLC que sf-skills no tiene:**
 
 - **Assessment OWASP LLM Top 10** sobre el agente vivo, con probes adversariales y grading
-  A–F. No tiene equivalente en sf-skills. **Desde ADLC 0.11.0 no es una skill propia**: era
+  A–F. Cuando se tomó esta decisión no tenía equivalente en sf-skills (ver la revisión del
+  2026-10-05 más abajo). **Desde ADLC 0.11.0 no es una skill propia**: era
   `agentforce-secure` y ahora es el **Modo C** de `agentforce-adlc:agentforce-test`
   (C1 = suite deployable, C2 = red team en vivo). Verificado contra el plugin instalado el
   2026-08-19: `skills/` solo contiene `agentforce-generate`, `agentforce-observe` y
@@ -94,6 +101,21 @@ invertir la tabla de ruteo. Chequear el `CHANGELOG.md` de ADLC cada tanto.
 hasta que se verificó contra el plugin instalado. **Al correr `/actualizar-entorno`, no alcanza
 con `claude plugin update`: hay que mirar qué skills expone realmente el plugin** y ajustar la
 tabla de ruteo de `CLAUDE.md` §2 si cambiaron.
+
+**Revisión 2026-10-05 — sf-skills 1.59.0 también trae seguridad.** El `agentforce-test` de
+sf-skills ahora incluye su propio **Modo C** (OWASP LLM Top 10, C1 = suite deployable,
+C2 = red team en vivo con nota A–F; referencias `security-test-design.md`,
+`owasp-categories.md`, `security-scoring-methodology.md`). Con eso, lo único que justificaba
+ADLC pasó a tener equivalente en la librería primaria.
+
+- **Decisión:** mantener ADLC para la pasada de seguridad, como hasta ahora. No se cambia un
+  flujo que ya funciona.
+- **Consecuencia:** hay dos skills `agentforce-test`, las dos con un "Modo C", y la de
+  sf-skills dispara con las mismas palabras ("OWASP", "red team", "prompt injection"). Por
+  eso `CLAUDE.md` §2 obliga a nombrar la de seguridad siempre con su prefijo completo:
+  `agentforce-adlc:agentforce-test`.
+- **Para reevaluar:** si ADLC deja de mantenerse o el Modo C de sf-skills lo supera, pasar
+  la seguridad a sf-skills y dejar ADLC como opcional.
 
 ---
 
@@ -120,7 +142,7 @@ diff de un cambio de comportamiento sea legible.
 
 ---
 
-## ADR-6 — Alcance genérico: dos vías, dos PRDs, 94 skills completas
+## ADR-6 — Alcance genérico: dos vías, dos PRDs, todas las skills de sf-skills
 
 **Decisión:** el repo no es solo para agentes. sf-skills cubre toda la plataforma, así que el
 pipeline tiene dos vías (`RUNBOOK.md`): **A** para agentes Agentforce, **B** para trabajo
@@ -128,10 +150,15 @@ general (objetos, Flows, Apex, LWC, permisos, integraciones). Cada vía tiene su
 PRD (`templates/prd-agente.md` / `templates/prd-general.md`) y su plantilla de carpeta en
 `specs/`.
 
-**Consecuencia:** se conservan las 94 skills completas. Se descartó la idea de podarlas a las
-~37 de agentes (hubo un script `prune-skills.mjs`, eliminado): podar contradecía el alcance
-genérico. El costo es algo de ruido de triggering entre skills; lo mitiga el ruteo explícito
-de `CLAUDE.md` §2.
+**Consecuencia:** se conservan todas las skills de sf-skills (94 en julio, 251 desde el
+2026-10-05). Se descartó la idea de podarlas a las ~37 de agentes (hubo un script
+`prune-skills.mjs`, eliminado): podar contradecía el alcance genérico. El costo es algo de
+ruido de triggering entre skills; lo mitiga el ruteo explícito de `CLAUDE.md` §2.
+
+Las skills que Salesforce **retira** del repo original también se borran acá al actualizar
+(así se hizo el 2026-10-05 con las 7 `data360-*`, `experience-content-media-search` y
+`platform-agentsetup-categories-fetch`): conservar copias congeladas daría skills que nadie
+mantiene. Si hiciera falta una, está en el historial de git.
 
 **Punto de entrada único:** `templates/INICIAR.md` — un prompt que un usuario sin conocimientos
 de código pega en Claude Code, y que clasifica el trabajo, elige el meta-prompt y arranca el
@@ -174,11 +201,12 @@ de qué se le hizo a una org queda en el scrollback de una sesión de Claude Cod
 pierde. Tres consecuencias concretas: no se puede revertir, no se puede auditar, y quien
 retome el trabajo (otra persona u otra sesión) arranca a ciegas.
 
-**Por qué archivo y no hook.** Un hook `PostToolUse` sobre Bash sería más confiable que una
-instrucción, pero no puede saber a qué trabajo pertenece la acción: el path de destino
-depende de `specs/<Trabajo>/`, que cambia por trabajo y no está en el entorno. Un hook
-escribiría a un log plano del repo y alguien tendría que repartirlo igual. Queda como
-mejora futura: hook que escribe crudo + Claude que lo consolida en la bitácora del trabajo.
+**Por qué archivo y no solo hook.** Un hook `PostToolUse` no puede saber a qué trabajo
+pertenece la acción: el path de destino depende de `specs/<Trabajo>/`, que cambia por
+trabajo y no está en el entorno. Por eso el registro real es el archivo. **Implementado
+como red de seguridad:** el hook de `.claude/settings.json` llama a `tools/log-sf.ps1`, que
+anota crudo (timestamp + comando) cada `sf` que escribe en `.bitacora/comandos.log`
+(gitignoreado), y Claude lo consolida en la bitácora del trabajo (`CLAUDE.md` §5).
 
 **Por qué separado de `NOTES.md`.** Son dos cosas con reglas opuestas: la bitácora es
 factual y no se edita nunca; NOTES es razonamiento y se corrige libremente. Mezclarlas hace
@@ -202,11 +230,13 @@ El instalador de `npx skills` había generado **tres** ubicaciones:
 | Carpeta | Qué era | Estado |
 |---|---|---|
 | `.agents/skills/` | Copia canónica (formato universal, trackeada por `skills-lock.json`) | ✅ se queda |
-| `.claude/skills/` | 94 symlinks hacia `.agents/skills/` — 0 bytes, no son copias | ✅ se queda |
+| `.claude/skills/` | Enlaces hacia `.agents/skills/` — 0 bytes, no son copias | ✅ se queda |
 | `agent/skills/` | Copia real (22 MB) en formato adaptado para otras herramientas (Cursor/Codex) | ❌ eliminada |
 
-Como este repo solo usa Claude Code, `agent/` era peso muerto. Si algún día se trabaja con
-otra herramienta de IA, `npx skills forcedotcom/sf-skills --all` la regenera.
+Como este repo solo usa Claude Code, `agent/` era peso muerto. La generaba la opción `--all`
+del instalador, que instala para **todos** los agentes: por eso `/actualizar-entorno` ahora
+instala solo para Claude Code (`--agent claude-code`). Si algún día se trabaja con otra
+herramienta de IA, `npx skills add forcedotcom/sf-skills --all` la regenera.
 
 ## Deuda técnica pendiente
 
@@ -221,14 +251,31 @@ que resuelvan y apunta al script si no.
 Repo inicializado con remoto en GitHub. `.gitignore` no excluye `.agents/` ni
 `skills-lock.json`.
 
-### 3. El cheatsheet cubre solo la vía A
-
-`docs/cli-cheatsheet.md` son 184 líneas 100% de Agentforce. No hay comandos verificados de
-vía B (objetos, campos, Apex, Flows, deploy general, borrado de metadata). Quien trabaje
-metadata general depende de las skills de sf-skills, sin la capa de trampas verificadas que
-sí tiene la vía A.
-
 ### ~~3. `.mcp.json` pendiente de crear~~ — RESUELTO (2026-07-27)
 
 Creado en la raíz con el servidor `salesforce-docs` (transporte HTTP, scope proyecto).
 Commitearlo junto con el resto.
+
+### 4. El cheatsheet cubre solo la vía A
+
+`docs/cli-cheatsheet.md` es casi 100% de Agentforce. No hay comandos verificados de
+vía B (objetos, campos, Apex, Flows, deploy general, borrado de metadata). Quien trabaje
+metadata general depende de las skills de sf-skills, sin la capa de trampas verificadas que
+sí tiene la vía A.
+
+### 5. Arreglos de scripts detectados en la revisión del 2026-10-05 (pendientes)
+
+Detectados al analizar el repo; no se tocaron para no cambiar lo que funciona sin un PR
+propio:
+
+- `tools/org.ps1` y `tools/bootstrap.ps1` etiquetan como **PRODUCCIÓN** toda org que no sea
+  sandbox ni scratch, incluidas las Developer Edition (que `CLAUDE.md` §3.2 trata como flujo
+  normal). Habría que mirar también `OrganizationType`.
+- `tools/log-sf.ps1` descarta un comando si contiene en **cualquier parte** un patrón de solo
+  lectura: `sf project deploy start ... && sf org display` no se registra. Además trata
+  `sf agent preview` como solo lectura, pero con `--use-live-actions` ejecuta Flows reales
+  que pueden escribir en la org.
+- El hook de `.claude/settings.json` llama a `tools/log-sf.ps1` con ruta relativa: si la
+  sesión cambia de carpeta, falla en silencio.
+- `tools/link-skills.ps1` enlaza cualquier carpeta de `.agents/skills/`, aunque no tenga
+  `SKILL.md`.

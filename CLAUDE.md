@@ -20,7 +20,7 @@ Confirmá que podés leer `.claude/skills/agentforce-generate/SKILL.md`. Si no p
 
 > **PARÁ. No empieces a construir.** En un clon nuevo `.claude/skills/` **no existe** — son
 > enlaces por máquina, gitignoreados a propósito. Esta sesión arrancó **sin ninguna de las
-> 94 skills**, y construir así significa inventar sintaxis de Agent Script y de metadata:
+> skills de sf-skills**, y construir así significa inventar sintaxis de Agent Script y de metadata:
 > exactamente lo que prohíbe §1.
 >
 > Decíselo al usuario en una línea, corré `pwsh tools/link-skills.ps1`, y **pedile que
@@ -89,8 +89,9 @@ la org (describe / `platform-soql-query`) antes de afirmarlos.
 ## 2. Ruteo de skills (importante — hay colisión de nombres)
 
 Este proyecto tiene **dos librerías de skills que exponen nombres idénticos**:
-`forcedotcom/sf-skills` (a nivel proyecto, en `.agents/skills/`, 94 skills que cubren toda la
-plataforma) y `agentforce-adlc` (plugin global, namespaceado como `agentforce-adlc:*`).
+`forcedotcom/sf-skills` (a nivel proyecto, en `.agents/skills/`, cubre toda la plataforma;
+la lista exacta está en `skills-lock.json`) y `agentforce-adlc` (plugin global, namespaceado
+como `agentforce-adlc:*`).
 
 Regla dura:
 
@@ -103,8 +104,14 @@ Regla dura:
 | Todo lo demás de Salesforce (Apex, Flow, objetos, permisos, LWC, Data Cloud, integraciones…) | la skill de sf-skills que corresponda | — |
 
 **Por qué:** sf-skills es la librería oficial de Salesforce y trae referencias con semántica de
-CLI verificada. ADLC aporta valor único solo en la pasada de seguridad. Razonamiento completo
-en `docs/DECISIONS.md`.
+CLI verificada. ADLC se mantiene para la pasada de seguridad. Razonamiento completo en
+`docs/DECISIONS.md` (ADR-3).
+
+> **Data Cloud:** desde sf-skills 1.59.0 ya no existen las skills `data360-activate`,
+> `-connect`, `-harmonize`, `-orchestrate`, `-prepare`, `-query` ni `-segment` (las retiró
+> Salesforce). Quedan `data360-schema-get`, `data360-code-extension-generate`,
+> `platform-dataspace-access-configure` y, para agentes, `agentforce-observe` y
+> `agentforce-d360-analyze`. Para lo que no cubran, la fuente es el MCP de docs (§1).
 
 > ⚠️ **`agentforce-secure` ya no existe.** Desapareció como skill propia: desde ADLC 0.11.0 la
 > seguridad es el **Modo C** de `agentforce-adlc:agentforce-test` (C1 = suite de seguridad
@@ -117,6 +124,12 @@ en `docs/DECISIONS.md`.
 > |---|---|
 > | Tests funcionales (¿rutea bien? ¿llama la acción correcta?) | `agentforce-test` (sf-skills) |
 > | Tests de seguridad / OWASP / prompt injection | `agentforce-adlc:agentforce-test` Modo C |
+>
+> ⚠️ **Desde sf-skills 1.59.0, el `agentforce-test` de sf-skills también trae un "Modo C" de
+> seguridad** y su descripción dispara con "OWASP", "red team" o "prompt injection". Las dos
+> skills se llaman igual y los dos modos se llaman igual. La decisión del repo (ADR-3,
+> revisada el 2026-10-05) es **seguir usando el de ADLC** para seguridad: nombralo siempre
+> con su prefijo completo, `agentforce-adlc:agentforce-test`, nunca a secas.
 
 **Nunca** instales ADLC con `tools/install.sh` (file-copy): copia `skills/agentforce-*` a
 `~/.claude/skills/` con los mismos nombres que las de proyecto y rompe el ruteo. Solo plugin.
@@ -480,10 +493,14 @@ agentforce-workspace/
 ├── .claude/settings.json  ← hook que registra los comandos sf (bitácora, §5)
 ├── tools/                 ← bootstrap.ps1, link-skills.ps1, log-sf.ps1, org.ps1
 ├── specs/                 ← 1 carpeta por trabajo (el pensamiento)
-│   ├── _TEMPLATE-agente/    PRD.md · BITACORA.md · NOTES.md · testSpec.yaml
-│   └── _TEMPLATE-general/   PRD.md · BITACORA.md · NOTES.md
+│   ├── _TEMPLATE-agente/    README.md · BITACORA.md · NOTES.md
+│   └── _TEMPLATE-general/   README.md · BITACORA.md · NOTES.md
+│                            (PRD.md lo genera el meta-prompt; testSpec.yaml sale de
+│                             templates/testSpec-template.yaml)
 ├── force-app/main/default/  ← metadata deployable (el artefacto)
-├── .agents/skills/        ← sf-skills, 94 skills (versionadas, ver skills-lock.json)
+├── .agents/skills/        ← sf-skills (versionadas; la lista exacta está en skills-lock.json).
+│                            SOLO skills: nada de un trabajo puntual va acá adentro
+│                            (ese lugar es specs/<Trabajo>/, gitignoreado)
 └── .claude/skills/        ← enlaces a .agents/skills/ (NO son copias; gitignoreados,
                              se recrean con `pwsh tools/link-skills.ps1`)
 ```
@@ -504,6 +521,9 @@ Dentro de `specs/<Trabajo>/`, los tres archivos responden preguntas distintas:
   Solo con `--from-definition` para ingeniería inversa.
 - No metas datos de cliente, IDs de org, retriever IDs ni credenciales en el repo.
   Van en `.env` (gitignoreado) o por parámetro.
+- No guardes nada de un trabajo (versiones de `.agent`, diffs, prompts, scripts) dentro de
+  `.agents/skills/`: esa carpeta **sí se commitea** y `/actualizar-entorno` la sube entera.
+  Los archivos de un trabajo van en `specs/<Trabajo>/`, que está gitignoreado.
 - No deployes un `.agent` sin `sf agent validate authoring-bundle` antes.
 - No des por terminado un agente sin la pasada de seguridad: `agentforce-adlc:agentforce-test`
   en **Modo C** (ex `agentforce-secure`, que ya no existe).

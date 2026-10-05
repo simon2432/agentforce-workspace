@@ -21,8 +21,9 @@ Quiero arrancar un trabajo nuevo en Salesforce. Guiame según el proceso de este
 2. Clasificalo: ¿es un AGENTE Agentforce, o es TRABAJO GENERAL de Salesforce
    (objetos, campos, flows, Apex, pantallas, permisos, reportes, integraciones)?
    Decime cuál elegiste y por qué.
-3. Verificá el entorno: que haya una org conectada (sf config get target-org --json).
-   Si no hay, guiame para conectarla paso a paso.
+3. Verificá la org con `pwsh tools/org.ps1`: muestra las orgs conectadas con su tipo
+   (sandbox / scratch / PRODUCCIÓN) y cuál está activa. Si no hay ninguna, o si el
+   "Origen" dice default global, guiame para elegirla o conectarla paso a paso.
 4. Usá el meta-prompt que corresponda:
    - Agente  → templates/prd-agente.md
    - General → templates/prd-general.md
@@ -49,7 +50,7 @@ Importante: explicame todo en lenguaje simple, sin asumir que sé programar.
 4. **Construye por etapas** siguiendo el RUNBOOK, mostrándote cada resultado.
 5. **Testea y deploya** con tu aprobación en cada paso que toque la org.
 
-## Las tres cosas que sí tenés que saber
+## Lo que sí tenés que saber
 
 - **Nunca aprobar un deploy sin entender qué hace.** Claude tiene que validarlo primero
   (`deploy validate`, que no cambia nada) y explicarte qué entra y qué pisa. Si no lo hizo, pedíselo.
