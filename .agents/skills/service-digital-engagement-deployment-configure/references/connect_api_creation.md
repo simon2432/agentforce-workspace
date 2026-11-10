@@ -15,8 +15,10 @@ Web-type Embedded Service Deployments cannot be created via Metadata API due to 
 ## Connect API Endpoint
 
 ```text
-POST /connect/embeddedmessaging/deployment/setup
+POST /services/data/vXX.0/connect/embeddedmessaging/deployment/setup
 ```
+
+Always use the fully-qualified path (minimum `v67.0`). A bare `/connect/...` path is not routed.
 
 ### Request Body (Web)
 
@@ -55,10 +57,13 @@ POST /connect/embeddedmessaging/deployment/setup
 
 ### Using Salesforce CLI (Web)
 
+Always create Web deployments with the CLI. The same call through the headless-360 MCP `dispatch` fails with an
+`INTERNAL_ERROR` server error during site creation.
+
 ```bash
 sf api request rest \
+  "/services/data/v67.0/connect/embeddedmessaging/deployment/setup" \
   --method POST \
-  --url "/connect/embeddedmessaging/deployment/setup" \
   --body '{"name":"<NAME>","masterLabel":"<LABEL>","deploymentType":"Web","clientVersion":"WebV2","hostDomain":"<DOMAIN>","messagingChannelId":"<CHANNEL_ID>"}' \
   --target-org <org-alias>
 ```
@@ -67,8 +72,8 @@ sf api request rest \
 
 ```bash
 sf api request rest \
+  "/services/data/v67.0/connect/embeddedmessaging/deployment/setup" \
   --method POST \
-  --url "/connect/embeddedmessaging/deployment/setup" \
   --body '{"name":"<NAME>","masterLabel":"<LABEL>","deploymentType":"API","messagingChannelId":"<CHANNEL_ID>"}' \
   --target-org <org-alias>
 ```
@@ -114,22 +119,36 @@ Save the `embeddedServiceDeploymentId` — it identifies the deployment for subs
 After creating the Web ESD via Connect API:
 
 1. **Update via Metadata API** — deploy `EmbeddedServiceConfig` XML with full configuration (forms, branding, channel settings, T&C)
-2. **Publish** — make changes live via Connect API publish endpoint
+2. **Publish** — see below
 
 ---
 
 ## Publishing After Updates
 
-After any update to a Web ESD (branding, forms, labels, settings), publish to make changes live:
+Updates to a Web ESD (branding, forms, labels, settings) stay in draft until published. Publish only after the user approves (SKILL.md step 17c):
 
 ```text
-POST /connect/embeddedservice/embeddedserviceconfig/publish/<EMBEDDED_SERVICE_CONFIG_ID>
+POST /services/data/vXX.0/connect/embeddedservice/embeddedserviceconfig/publish/<EMBEDDED_SERVICE_CONFIG_ID>
 ```
 
 ```bash
 sf api request rest \
-  /services/data/v67.0/connect/embeddedservice/embeddedserviceconfig/publish/<EMBEDDED_SERVICE_CONFIG_ID> \
+  "/services/data/v67.0/connect/embeddedservice/embeddedserviceconfig/publish/<EMBEDDED_SERVICE_CONFIG_ID>" \
   --method POST \
+  --body '{}' \
+  --target-org <org-alias>
+```
+
+The `--body '{}'` is required: a POST with no body (or `--body ""`) fails in the CLI with
+"No 'mode' found in 'body' entry" before any request is sent. The URL is a positional
+argument, not a flag (`--url` fails with "Nonexistent flag"), and must be fully qualified
+(`/services/data/vXX.0/connect/...`).
+
+To obtain the `EMBEDDED_SERVICE_CONFIG_ID` (a Tooling API object, so `--use-tooling-api` is required):
+
+```bash
+sf data query --use-tooling-api \
+  --query "SELECT Id FROM EmbeddedServiceConfig WHERE DeveloperName = '<DEPLOYMENT_NAME>'" \
   --target-org <org-alias>
 ```
 

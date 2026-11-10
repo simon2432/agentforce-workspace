@@ -20,7 +20,7 @@ accepted paths — read them, don't guess. See
 for the canonical SOQL; run it once per invoked workflow (`create`, `update`,
 `copy`), producing three contracts.
 
-**Additionally**, apply the eight cross-workflow rules (R1..R8) in
+**Additionally**, apply the nine cross-workflow rules (R1..R9) in
 `references/conventions-and-payload-rules.md` ("Promotion payload — cross-workflow
 rules"). These are the constraints the schema alone cannot express and every one
 has caused a smoke-test failure historically. Summary of what the skill MUST do
@@ -28,12 +28,13 @@ on top of the derived contract:
 
 - **R1** — force `DateFrom`, `DateThru`, `Slogan` into the create payload. If the user gave duration-in-weeks intent, compute `DateThru = DateFrom + weeks*7 - 1` client-side.
 - **R2** — poll for `Status__c = 'Calculated'` (NOT `Processed`, which does not exist in the picklist).
-- **R3** — send level NAMES verbatim as `ProductFilter.Criteria` keys (`Category`, `Brand`, ...), NOT Product2 field API names.
+- **R3** — `ProductFilter` is a **top-level** promotion sibling of `Slogan`/`DateFrom`/`Tactics`, **NOT** nested under `Tactics[]` — nesting is schema-valid at ingest but fails downstream with the misleading "You must select at least one Category to the Promotion" (see R3a). Keys are level NAMES (`Category`, `Brand`, …), NOT Product2 field API names. Values are external ids (`<prefix>__Consumer_Goods_External_Product_Id__c`), NOT display `Name`/label (passing a Name fails with the misleading `TransformationError: Could not find Products: <Name>` — see R3b).
 - **R4** — pre-flight the anchor account has a `Plan` `Account_Extension__c` row valid for `DateFrom..DateThru` in this sales org.
 - **R5** — restrict `ManualInputs[].KPI` values to `editable` / `editable_calculated` `KPI_Definition__c.Name` on the template's `KPI_Set__c`.
 - **R6** — for `copy`, derive requireds the same way, then layer the Apex-only preconditions (`Is_Copyable__c`, template type, anchor).
 - **R7** — reject any `Tactics[*].TacticTemplate` not linked to the chosen `PromotionTemplate` in this sales org.
 - **R8** — reject any `PromotionTemplate` whose `Promotion_Type__c != 'Promotion'` (fail-fast before ingest — otherwise it surfaces as a misleading `/productfilter` error).
+- **R9** — verify running user holds `Product_Category_Share__c` with `Access_Level__c='ReadWrite'` for every category referenced by the payload (template anchor category + `ProductFilter.Criteria.Category`). Missing rows → stop; do not insert shares.
 
 For each derived contract, compute:
 - `requiredPaths` = union of `Path__c` where `Required__c = true`.
@@ -93,6 +94,38 @@ request: a bearer token in shell output, traces, or agent context is a
 credential exposure (S1). Do **not** add `--json` to `sf api request rest` — the
 raw stdout body is already JSON. `${URL_NS}` is the namespace segment from
 Phase 1 (`/cgcloud` / `/cgcloud_dev` / empty); the endpoint is instance-relative.
+
+**`sf … --json | jq …` parse caveat.** `sf` occasionally prints a plain-text
+update-availability banner (e.g. `›   Warning: @salesforce/cli update available
+from X to Y.`) ahead of the JSON body on stdout, which silently breaks a direct
+`| jq` pipe (jq hits the banner line first and errors with `invalid numeric
+literal` / `parse error`). Two defenses — pick one and use it consistently
+across every `sf … --json | jq` pipe in this phase:
+
+- Export `SF_SKIP_NEW_VERSION_CHECK=true` for the session (suppresses the
+  banner at the source; preferred for a single-session smoke run).
+- Strip pre-JSON noise before piping: `sf … --json | sed -n '/^[\[{]/,$p' | jq .`
+  (keeps everything from the first `{` or `[` onward; works even if the banner
+  grows to multiple lines).
+
+The same caveat applies to the `sf data query --target-org <alias> --json` SOQL
+calls elsewhere in this skill — a stale CLI emits the banner on arbitrary
+invocations, not just the first one.
+
+**Smoke-time re-check of running user's `${PREFIX_UNDER}Sales_Org__c`.** Phase 1
+step 7 gated the whole invocation on this, but Phase 6 can be minutes/hours later
+and the user record may have drifted (a parallel admin edit, a session on a
+different browser tab that re-ran with `--yes`). Re-run the same SOQL before the
+first REST call in each of 6a/6b/6c:
+
+```bash
+sf data query --target-org <alias> --json --query "
+  SELECT ${PREFIX_UNDER}Sales_Org__c FROM User WHERE Username = '<running-user-name>'
+" > ./out/smoke/user-so-check.json
+```
+
+If the value is blank or `!= <salesOrg>`, stop with the same fix options as
+Phase 1 step 7 — do NOT auto-mutate the user record.
 
 ```bash
 BASE="/services/apexrest${URL_NS}/promotions"

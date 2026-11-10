@@ -6,14 +6,11 @@ metadata:
   domains: ["Developer Experience"]
   relatedSkills:
     - "dx-org-manage"
+    - "dx-org-snapshot-manage"
   cliTools:
     - tool: ["sf"]
       semver: ">=2.0.0"
-  accessCheck:
-    - type: "orgPref"
-      value: "ScratchOrgManagementPref"
-    - type: "orgPref"
-      value: "ShapeExportPref"
+  accessCheck: "(OrgPreferences.ScratchOrgManagementPref) && (OrgPreferences.ShapeExportPref)"
 ---
 
 # dx-org-shape-manage

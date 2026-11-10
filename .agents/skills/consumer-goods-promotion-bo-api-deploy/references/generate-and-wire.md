@@ -25,7 +25,29 @@ Both phases run only on a green Phase 4 and a confirmed Phase 5 interview.
    for the running user. Any failure → stop, print the failing field + FLS
    remediation.
 
-3. **Generate the Apex class from the interview.** The generator takes the
+3. **Clean the deploy staging directory (mandatory on every invocation).**
+   Before writing the new `<stepName>.cls` to
+   `./.promotion-bo-api-deploy/force-app/main/default/classes/`, delete every
+   `*.cls` and `*.cls-meta.xml` already in that directory. This runs on EVERY
+   invocation, not just the second one — the generated class is the only
+   artifact that should live under `classes/` for the next deploy. Rationale:
+   a leftover `.cls` from a prior step run that is no longer known to the
+   source-tracking manifest makes `sf project deploy start` (step 6) evaluate
+   the deploy with `rollbackOnError: true` and silently roll back the *entire*
+   batch — including the new class — while the CLI still surfaces
+   `"created": true` for the intended component. The user sees apparent
+   success; the class is not actually in the org. Do NOT wipe `setup-data/`
+   under the same staging root (Phase 3a's retrieved read-only static resource
+   lives there) and do NOT wipe `sfdx-project.json` or `interview.json`.
+   Concretely:
+
+   ```bash
+   mkdir -p ./.promotion-bo-api-deploy/force-app/main/default/classes
+   find ./.promotion-bo-api-deploy/force-app/main/default/classes \
+     -maxdepth 1 -type f \( -name '*.cls' -o -name '*.cls-meta.xml' \) -delete
+   ```
+
+4. **Generate the Apex class from the interview.** The generator takes the
    schema captured in the interview (Phase 5.1) and emits a namespace-agnostic
    Callable in the same shape as the reference example
    (`references/reference-example-set-comment-value.md`). Rules (do not deviate):
@@ -50,6 +72,10 @@ Both phases run only on a green Phase 4 and a confirmed Phase 5 interview.
        <stepName>.cls-meta.xml
    ```
 
+   The staging-dir cleanup (step 3 above) must have already run — the new
+   `.cls` is the only artifact that should land under `classes/` for the next
+   deploy.
+
    `sfdx-project.json`:
    ```json
    {
@@ -67,13 +93,13 @@ Both phases run only on a green Phase 4 and a confirmed Phase 5 interview.
    </ApexClass>
    ```
 
-4. **Show the user the generated class + confirm.** Print the full
+5. **Show the user the generated class + confirm.** Print the full
    `<stepName>.cls` body and ask "Deploy this? [y/N]". `n` → save to
    `./.promotion-bo-api-deploy/` and exit; the user can hand-edit and re-run
    with `--interview-file` pointing at their tweaked answers, or drop their own
    `.cls` into the temp tree before re-invoking. `y` → deploy.
 
-5. **Deploy:**
+6. **Deploy:**
 
    ```bash
    sf project deploy start \
@@ -188,6 +214,15 @@ for (String wf : workflows) {
 // pre-check. SIS uses RecordType to declare the JSON type (String, Array,
 // Boolean, Number, Object) — a missing RecordTypeId defaults to Array,
 // which produces "Expected List<Object>" at runtime.
+//
+// `Required__c` MUST be set explicitly. The field defaults to `true` at
+// the platform level, so omitting it silently promotes every optional
+// input path to mandatory org-wide for that workflow — every subsequent
+// ingest of a promotion that does not carry the path fails with
+// `Required property missing at #.<path>`. Default the SIS insert to
+// `false`; only set `true` for paths the interview explicitly flagged
+// as required (interview field `inputPathRequired`, defaults to `false`).
+Boolean inputPathRequired = <inputPathRequired>;  // interview answer; defaults to false
 Id sisRecordTypeId = [
   SELECT Id FROM RecordType
    WHERE SobjectType = '${PREFIX_UNDER}BO_API_Step_Input_Structure__c'
@@ -203,11 +238,21 @@ for (${PREFIX_DOT}BO_API_Step_Input_Structure__c s : [
 }
 List<${PREFIX_DOT}BO_API_Step_Input_Structure__c> sisRows =
   new List<${PREFIX_DOT}BO_API_Step_Input_Structure__c>();
+// `Path__c` carries a packaged validation rule requiring JSON-path form
+// (leading `.` or `$`). Interview values from the user typically omit the
+// leading dot (e.g. `Comment`); normalize before insert or the row rejects
+// with `FIELD_CUSTOM_VALIDATION_EXCEPTION: The Path must represent a
+// valid JSON path.: [${PREFIX_UNDER}Path__c]`. Existing-path comparison
+// also uses the normalized value so a re-run does not double-insert.
 for (String inputPath : inputPaths) {
-  if (existingPaths.contains(inputPath)) continue;
+  String normalizedPath = (inputPath.startsWith('.') || inputPath.startsWith('$'))
+    ? inputPath
+    : '.' + inputPath;
+  if (existingPaths.contains(normalizedPath)) continue;
   sisRows.add(new ${PREFIX_DOT}BO_API_Step_Input_Structure__c(
     ${PREFIX_DOT}BO_API_Workflow_Step__c = step.Id,
-    ${PREFIX_DOT}Path__c = inputPath,
+    ${PREFIX_DOT}Path__c = normalizedPath,
+    ${PREFIX_DOT}Required__c = inputPathRequired,
     RecordTypeId = sisRecordTypeId
   ));
 }

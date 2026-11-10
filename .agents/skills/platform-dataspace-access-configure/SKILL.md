@@ -1,9 +1,10 @@
 ---
 name: platform-dataspace-access-configure
-description: "Use this skill to configure or inspect Salesforce Data Cloud DataSpace access for permission sets. Grants dataspace-level access via MDAPI PermissionSet XML with dataspaceScopes elements, optionally grants object-level access to DMO, DLO, or CIO objects via the Object Access Grants Connect API, and inspects existing scopes via read-only PermissionSet metadata retrieval. TRIGGER when: user needs to create or update a permission set with DataSpace access, grant access to a specific dataspace, list permission sets with access to a DataSpace, configure dataAccessLevel/objectAccessLevel, add RBAC object access grants, or list/remove object access grants for a permission set + DataSpace pair. DO NOT TRIGGER when: the task is a generic permission set without dataspace access (use platform-permission-set-generate), the request is about data ingestion/streams, or the work involves creating dataspaces themselves rather than granting access to them."
+description: "Grant a permission set Data Cloud access two ways: (1) data-space (dataspace) access via dataspaceScopes in PermissionSet XML (MDAPI) — create, change, or remove it; (2) object-level access to a DMO/DLO/CIO object (e.g. Account__dlm) via the Object Access Grants Connect API (ssot/data-governance/object-access-grants) — grant, list, revoke; plus read-only scope inspection. TRIGGER on: dataspace scope / data space access for a permission set, dataAccessLevel / objectAccessLevel, 'use the Connect API to grant a permission set access to an <object>__dlm', RBAC object grants. DO NOT TRIGGER for creating the dataspace itself (the Data 360 data-space skill), a generic permission set with no dataspace access (platform-permission-set-generate), or an access policy / policy rule / tag-based access (platform-policy-rule-generate). For a vague object-access ask, ask permission-set way vs policy way."
 metadata:
   relatedSkills:
     - "platform-permission-set-generate"
+    - "platform-policy-rule-generate"
   version: "1.0"
   domains: ["Platform", "Data 360"]
   minApiVersion: "67.0"
@@ -27,31 +28,63 @@ The MDAPI layer is required to establish the PermissionSet → DataSpace linkage
 
 ---
 
+## When to use this skill (routing)
+
+This is the **permission-set / RBAC** path to Data Cloud access:
+
+- **"Grant access to a data space" / dataspace access** → this skill (Layer 1, `dataspaceScopes` on a permission set).
+- **Grant object access via a permission set / RBAC object grant** → this skill (Layer 2, Object Access Grants Connect API).
+
+Object access has a second, separate path — a **data-governance access policy** (a tag/OLS `PolicyRuleDefinition`), owned by **`platform-policy-rule-generate`**. Infer the mechanism from context; ask only when the request is vague:
+
+- The user is **driving from a permission set** (mentions a permission set, RBAC, or an object grant on a permset) → object access grant → **this skill**, no need to ask.
+- The user **frames it as a policy** (create a policy / access policy / policy rule, OLS/FLS/RLS, tag/classification-based) → route to **`platform-policy-rule-generate`**.
+- The request is **genuinely vague** — "grant object access to X" with no mechanism and no clue → **ASK**: the **permission-set way** (this skill) or the **policy way** (`platform-policy-rule-generate`)? If it is also unclear whether the object is a Data Cloud object, ask which object first.
+
+"Access to a **data space**" is always this skill (the permission-set / `dataspaceScopes` path) — no disambiguation needed.
+
+---
+
 ## Decide the Case First
+
+> **Case B — preserve existing content.** Do not delete content you did not intend to change without the user's confirmation. Fix deploy or validation errors that trace to your own `<dataspaceScopes>` block (wrong element or enum names). For errors that originate in pre-existing content you were told to preserve (e.g. a `<tabSettings>` or `<fieldPermissions>` entry), make no further edits to that content and report the error message and the offending element in your reply. A request to fix validation errors does not authorize removing content the user told you to preserve; deleting it needs the user's explicit confirmation.
 
 Pick exactly one case from the table below before writing any files. Each case has a different output shape.
 
 | Case | User intent | Permission set state | Files to emit |
 |---|---|---|---|
-| **A. Create new permset with DS access** | "create a permission set called X with dataspace scope Y" | does NOT exist yet | `permissionsets/<Name>.permissionset-meta.xml` **and** `package.xml` |
-| **B. Add DS access to existing permset** | "grant existing permission set X access to dataspace Y" | already deployed (may contain other permissions) | patched `permissionsets/<Name>.permissionset-meta.xml` **and** `package.xml` — see Case B workflow below |
+| **A. Create new permset with DS access** | "create a permission set called X with dataspace scope Y" | does NOT exist yet | `permissionsets/<Name>.permissionset-meta.xml` **and** `package.xml` (create `package.xml` only if absent) |
+| **B. Add DS access to existing permset** | "grant existing permission set X access to dataspace Y" | already deployed (may contain other permissions) | patched `permissionsets/<Name>.permissionset-meta.xml` **and** `package.xml` (keep the existing one if present; create only if absent) — see Case B workflow below |
 | **C. Object-level grant only** | "grant permset X access to object Z (in dataspace Y)" — permset + scope already configured | already deployed with `dataspaceScopes` | `api-request.json` (Connect API body). NO permission set XML, NO `package.xml` |
 | **D. Inspect existing DS access** | "which permission sets have access to dataspace Y?" | any | chat/report only. NO deployable files, NO runtime API mutation |
 
 Only emit the files listed for the case you picked. Emitting Case A/B files for a Case C prompt (or vice versa) is a correctness failure — extra files change the deployment shape.
 
-> **Case B — critical:** PermissionSet MDAPI deploy is a **full metadata replace**. Every `<objectPermissions>`, `<fieldPermissions>`, `<userPermissions>`, `<tabSettings>`, `<applicationVisibilities>`, `<recordTypeVisibilities>`, `<customPermissions>`, `<pageAccesses>`, `<classAccesses>`, `<customMetadataTypeAccesses>`, `<customSettingAccesses>`, `<externalDataSourceAccesses>` element you omit from the redeploy is **deleted from the org**. Before adding `<dataspaceScopes>` to an existing permset, retrieve the current XML and patch it — do not hand-author from scratch.
+> **Case B — critical:** PermissionSet MDAPI deploy is a **full metadata replace**. Every `<objectPermissions>`, `<fieldPermissions>`, `<userPermissions>`, `<tabSettings>`, `<applicationVisibilities>`, `<recordTypeVisibilities>`, `<customPermissions>`, `<pageAccesses>`, `<classAccesses>`, `<customMetadataTypeAccesses>`, `<customSettingAccesses>`, `<externalDataSourceAccesses>` element you omit from the redeploy is **deleted from the org**. Before adding, changing, or removing `<dataspaceScopes>` on an existing permset, start from its current XML and patch it — never author a permission set from scratch or write placeholder comments such as "replace with actual permissions", and never invent permissions that are not in the file.
 
 ### Case B workflow
 
-1. Retrieve the existing permission set:
+0. **Local project first.** If the workspace already contains `permissionsets/<Name>.permissionset-meta.xml` (e.g. under `force-app/main/default/`), READ that file first and edit it in place — it is the current XML; no org or retrieve is needed. Also reuse an existing `package.xml` as-is (add the permset to `<members>` only if missing). If no org is connected, do not stop to ask; use the workspace files.
+1. Only when the file is not in the workspace and an org is available, retrieve the existing permission set:
    ```bash
    sf project retrieve start --metadata PermissionSet:<Name> --target-org <alias>
    ```
-2. Open the retrieved `permissionsets/<Name>.permissionset-meta.xml`. Keep every element already there.
-3. Insert the `<dataspaceScopes>` block for the target DataSpace (element order in the file does not matter for MDAPI). If the file already has a `<dataspaceScopes>` block **for this same DataSpace**, replace only that block. Leave every `<dataspaceScopes>` block for other DataSpaces untouched — one block per DataSpace. For a requested scope removal, remove only the matching block and deploy; omitting the block revokes that DataSpace grant. Verify by retrieving the PermissionSet and confirming the matching `<dataspaceScopes>` block is absent.
-4. Write `package.xml` listing the permset in `<members>`.
+2. Open `permissionsets/<Name>.permissionset-meta.xml` (workspace copy or retrieved). Keep every element already there, byte-for-byte except the intended `<dataspaceScopes>` change.
+3. Insert the `<dataspaceScopes>` block for the target DataSpace (element order in the file does not matter for MDAPI). If the file already has a `<dataspaceScopes>` block **for this same DataSpace**, replace only that block. Leave every `<dataspaceScopes>` block for other DataSpaces untouched — one block per DataSpace. For a requested scope removal (revoke), delete ONLY that block; the `<fieldPermissions>`, `<objectPermissions>` and `<tabSettings>` counts must match the original. Omitting the block revokes that DataSpace grant. Verify by retrieving the PermissionSet and confirming the matching `<dataspaceScopes>` block is absent.
+4. Ensure `package.xml` lists the permset in `<members>` (create it only if absent).
 5. Redeploy with `sf project deploy start`.
+6. If deploy validation reports errors on elements you did not touch (e.g. `no CustomTab named Opportunity found` on a preserved `<tabSettings>`), leave them in place and report the message and offending element. **Stop-and-ask rule:** if the user then says "fix it", "fix the validation error" or "make it deploy", that is NOT confirmation to delete — do not remove, comment out or edit that element in any way. Reply that the entry was explicitly preserved, name the element, and ask whether they want it removed; delete it only after they answer yes to that specific question.
+
+### Choosing the access levels from the request wording
+
+| User wording | `dataAccessLevel` | `objectAccessLevel` |
+|---|---|---|
+| "governed by data governance policies" / "controlled by policy" | as stated; if the request does not state a `dataAccessLevel`, ask which one (do not silently default to `ALL`) | `BY_POLICY` |
+| "remove" / "revoke" the dataspace access | no level — remove the matching `<dataspaceScopes>` block (see Case B step 3); `NONE` keeps the scope but grants no data | n/a |
+| "controlled by the dataspace scope itself / by the parent" **and** "access to everything / all objects in the dataspace" | `CONTROLLED_BY_PARENT` | `ALL_IN_DATASPACE` |
+| An explicit level named in the request | use it verbatim | use it verbatim |
+
+`ALL_IN_DATASPACE` is only valid with `CONTROLLED_BY_PARENT`; do not pair it with `ALL`.
 
 ---
 
@@ -106,7 +139,7 @@ Embed a `<dataspaceScopes>` element inside the `PermissionSet` XML. Deploy with 
 
 ### Package Layout (Case A and Case B)
 
-A deployable bundle for Layer 1 always contains **both** files:
+A deployable bundle for Layer 1 contains **both** files (reuse an existing `package.xml`; create it only if absent):
 
 ```text
 <output-root>/
@@ -114,7 +147,7 @@ A deployable bundle for Layer 1 always contains **both** files:
   permissionsets/<Name>.permissionset-meta.xml
 ```
 
-`package.xml` (required — list every permission set being deployed in `<members>`):
+`package.xml` (list every permission set being deployed in `<members>`):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>

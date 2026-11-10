@@ -3,12 +3,14 @@ name: platform-custom-setting-generate
 description: "Use to create, generate, or validate Salesforce Custom Setting metadata. Trigger on custom settings (hierarchy/list), customSettingsType, SetupOwnerId, per-profile/per-user config overrides, feature flags/toggles, kill switches, or admin on/off switches (e.g. bypass triggers during a data load); also \"create a custom setting\" or a setting that silently deployed as a regular object. A kill switch is just a checkbox on a hierarchy setting — generate ONLY the setting, never an Apex trigger/handler. DO NOT TRIGGER for Custom Metadata Types (use platform-custom-metadata-type-generate), business-record objects (use platform-custom-object-generate), or secrets/tokens (use a Named Credential)."
 metadata:
   version: "1.0"
+  tags: ["setup"]
   minApiVersion: "60.0"
   domains: ["Platform"]
   relatedSkills:
     - "platform-custom-field-generate"
     - "platform-custom-metadata-type-generate"
     - "platform-custom-object-generate"
+    - "platform-metadata-api-context-get"
   cliTools:
     - tool: ["sf"]
       semver: ">=2.136.8"
@@ -35,6 +37,8 @@ Use this skill when you need to:
 > that checks the flag is the developer's to write — this skill generates the setting only.
 
 ---
+
+For authoritative Metadata API type, field, and enum details beyond this skill, use the `platform-metadata-api-context-get` skill.
 
 ## 1. Overview and Purpose
 

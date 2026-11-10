@@ -4,7 +4,8 @@ description: "Configure the \"Set Up Self Service for Employees on Slack\" / \"S
 metadata:
   version: "1.0"
   minApiVersion: "67.0"
-  domains: ["Service"]
+  domains:
+    - "Service"
   relatedSkills:
     - "experience-portal-create"
     - "service-itsm-agentic-setup-employee-agent-configure"
@@ -18,9 +19,7 @@ metadata:
   cliTools:
     - tool: ["node"]
       semver: ">=18.0.0"
-  accessCheck:
-    - type: "orgPref"
-      value: "EmployeeServiceSlackEnabled"
+  accessCheck: "OrgPreferences.EmployeeServiceSlackEnabled"
 allowed-tools: |
   Read AskUserQuestion Bash
   mcp__headless-360__discover
