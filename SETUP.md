@@ -18,23 +18,47 @@ Atajo: `pwsh tools/bootstrap.ps1` chequea A y B y te dice qué falta.
 | Node.js 20+ | `node -v` | https://nodejs.org (LTS) |
 | Salesforce CLI 2.x | `sf --version` | `npm install -g @salesforce/cli` · actualizar: `sf update` |
 | Claude Code | `claude --version` | `npm install -g @anthropic-ai/claude-code` |
-| **Python 3.9+** | `python3 --version` (Windows: `py --version`) | https://www.python.org/downloads/ — **requisito del plugin ADLC** |
+| **Python 3.9+, invocable como `python3`** | `python3 --version` → tiene que decir `Python 3.x` | https://www.python.org/downloads/ — **requisito del plugin ADLC** (sus hooks llaman a `python3`, no a `py`). Ver la nota de Windows abajo. |
 | Extensión Agent Script (VS Code) | Marketplace → "Agent Script" | Publicada por Salesforce (repo `salesforce/agentscript`) |
 
 > La extensión de VS Code no es opcional en la práctica: te da diagnostics en vivo sobre `.agent`.
 > Sin ella editás a ciegas y descubrís los errores recién en `sf agent validate`.
 
+> **Windows: `python3` suele ser un atajo falso.** Aunque Python esté instalado (y `py`
+> funcione), `python3` puede ser el atajo de la Microsoft Store, que solo responde
+> *"Python was not found"*. Los hooks de ADLC fallan en silencio y parece que todo anda.
+> Arreglo: copiá `python.exe` como `python3.exe` en la carpeta de tu Python (la que sale con
+> `py -0p`), y verificá con `where.exe python3` que esa carpeta aparezca **antes** que
+> `WindowsApps`. Si no, desactivá el atajo en *Configuración → Aplicaciones → Configuración
+> avanzada de aplicaciones → Alias de ejecución de aplicaciones*.
+
 ### Plugin agentforce-adlc
 
+Viene del **marketplace oficial de Salesforce** (`forcedotcom/sf-skills`, que en Claude Code
+se llama `salesforce`). ADLC se mudó ahí en 2026: el repo viejo
+`SalesforceAIResearch/agentforce-adlc` quedó congelado. Ver `docs/DECISIONS.md` ADR-2.
+
 ```powershell
-claude plugin marketplace add SalesforceAIResearch/agentforce-adlc
-claude plugin install agentforce-adlc@agentforce-adlc
+claude plugin marketplace add forcedotcom/sf-skills
+claude plugin install agentforce-adlc@salesforce
 ```
 
-Verificar: `claude plugin list`
-Actualizar: `claude plugin update agentforce-adlc@agentforce-adlc`
+Verificar: `claude plugin list` → tiene que decir `agentforce-adlc@salesforce`.
+Actualizar: `claude plugin marketplace update salesforce` y después
+`claude plugin update agentforce-adlc@salesforce`.
 
-**No uses** `tools/install.sh` de ese repo. Ver `docs/DECISIONS.md` §2.
+**Si `claude plugin list` dice `agentforce-adlc@agentforce-adlc`**, tenés la fuente vieja.
+Sacala antes de instalar la nueva (se llaman igual):
+
+```powershell
+claude plugin uninstall agentforce-adlc@agentforce-adlc
+claude plugin marketplace remove agentforce-adlc
+```
+
+**Del marketplace `salesforce` instalá solo `agentforce-adlc`.** Los otros plugins
+(`salesforce-development` y compañía) traen skills con los mismos nombres que las de
+`.agents/skills/` y rompen el ruteo de `CLAUDE.md` §2. Y nunca instales ADLC copiando
+archivos a `~/.claude/skills/` (lo que hacía el `install.sh` del repo viejo).
 
 Reiniciá Claude Code después de instalar — las skills se cargan al arranque.
 
@@ -124,8 +148,9 @@ sintaxis que ya no compila.
 > `npx skills update -p` para skills de proyecto, pero el repo no lo usa: el flujo probado
 > es el de `/actualizar-entorno`, que además limpia las skills que Salesforce retira.)
 
-> Las skills se conservan completas a propósito (251 al 2026-10-05): este repo sirve para
-> **todo** tipo de trabajo Salesforce, no solo agentes.
+> Las skills se conservan completas a propósito (274 al 2026-11-10, versión 1.69.0, incluidas
+> las que Salesforce publica solo dentro de sus plugins): este repo sirve para **todo** tipo
+> de trabajo Salesforce, no solo agentes.
 >
 > **Ojo con el instalador en Windows:** sin Modo Desarrollador no puede crear symlinks, así
 > que en vez de actualizar `.agents/skills/` deja **copias** en `.claude/skills/`. Por eso

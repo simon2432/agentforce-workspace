@@ -22,37 +22,62 @@ Test-Cmd "Node.js"        "node -v"          "https://nodejs.org (LTS, 20+)" | O
 Test-Cmd "Salesforce CLI" "sf --version"     "npm install -g @salesforce/cli" | Out-Null
 Test-Cmd "Claude Code"    "claude --version" "npm install -g @anthropic-ai/claude-code" | Out-Null
 
-$py = $false
-foreach ($c in @("py --version", "python3 --version", "python --version")) {
-    try { $v = Invoke-Expression $c 2>&1 | Select-Object -First 1
-          Write-Host ("  OK    {0,-22} {1}" -f "Python", $v) -ForegroundColor Green
-          $py = $true; break } catch {}
+# Python: los hooks de ADLC llaman a `python3`, no a `py`. En Windows `python3` suele ser el
+# atajo de la Microsoft Store: el comando existe pero responde "Python was not found", y
+# los hooks fallan en silencio. Por eso se prueba python3 de verdad (salida + exit code).
+function Get-PyVersion($exe) {
+    try {
+        $out = (& $exe --version 2>&1 | Out-String).Trim()
+        if ($LASTEXITCODE -eq 0 -and $out -match '^Python 3\.(\d+)') { return $out }
+    } catch { }
+    return $null
 }
-if (-not $py) {
-    Write-Host "  FALTA Python                 -> 3.9+ requerido por el plugin agentforce-adlc" -ForegroundColor Red
+$py3 = Get-PyVersion "python3"
+if ($py3 -and ($py3 -match '^Python 3\.(\d+)') -and [int]$Matches[1] -ge 9) {
+    Write-Host ("  OK    {0,-22} {1}" -f "Python (python3)", $py3) -ForegroundColor Green
+} elseif ($py3) {
+    Write-Host "  FALTA Python 3.9+            -> python3 es $py3; el plugin agentforce-adlc pide 3.9+" -ForegroundColor Red
+    $issues += "Python 3.9+ : https://www.python.org/downloads/"
+} elseif (Get-PyVersion "py") {
+    Write-Host "  FALTA python3                -> Python esta instalado ('py' anda) pero 'python3' no responde" -ForegroundColor Red
+    Write-Host "        Los hooks de ADLC llaman a python3. En Windows suele ser el atajo de la" -ForegroundColor Yellow
+    Write-Host "        Microsoft Store: ver SETUP.md Parte A, nota de Windows." -ForegroundColor Yellow
+    $issues += "python3 no responde (lo usan los hooks de ADLC) -> SETUP.md Parte A"
+} else {
+    Write-Host "  FALTA Python                 -> 3.9+ invocable como python3, requerido por el plugin agentforce-adlc" -ForegroundColor Red
     $issues += "Python 3.9+ : https://www.python.org/downloads/"
 }
 
 Write-Host "`n=== Plugin agentforce-adlc ===" -ForegroundColor Cyan
 try {
     $plugins = claude plugin list 2>&1 | Out-String
-    if ($plugins -match "agentforce-adlc") {
-        Write-Host "  OK    plugin instalado" -ForegroundColor Green
+    if ($plugins -match "agentforce-adlc@salesforce") {
+        Write-Host "  OK    plugin instalado (marketplace oficial de Salesforce)" -ForegroundColor Green
+    } elseif ($plugins -match "agentforce-adlc@agentforce-adlc") {
+        # Fuente vieja (SalesforceAIResearch/agentforce-adlc, congelada en 0.12.0): 'update'
+        # no llega a las versiones del marketplace oficial. Ver docs/DECISIONS.md ADR-2.
+        Write-Host "  WARN  plugin agentforce-adlc instalado desde la FUENTE VIEJA (congelada)" -ForegroundColor Yellow
+        Write-Host "        Migrar (se llaman igual: primero sacar la vieja):" -ForegroundColor Yellow
+        Write-Host "        claude plugin uninstall agentforce-adlc@agentforce-adlc" -ForegroundColor Yellow
+        Write-Host "        claude plugin marketplace remove agentforce-adlc" -ForegroundColor Yellow
+        Write-Host "        claude plugin marketplace add forcedotcom/sf-skills" -ForegroundColor Yellow
+        Write-Host "        claude plugin install agentforce-adlc@salesforce" -ForegroundColor Yellow
+        $issues += "plugin agentforce-adlc desde la fuente vieja -> migrar (SETUP.md Parte A)"
     } else {
         # Distinguimos los dos estados: son DOS pasos y es facil quedarse en el primero.
-        # Agregar el marketplace deja carpetas ~/.claude/plugins/*/agentforce-adlc que
-        # hacen parecer que esta instalado, pero installed_plugins.json sigue vacio.
+        # Agregar el marketplace deja carpetas en ~/.claude/plugins/ que hacen parecer que
+        # esta instalado, pero installed_plugins.json sigue vacio.
         $mk = Join-Path $env:USERPROFILE ".claude/plugins/known_marketplaces.json"
-        $mkAdded = (Test-Path $mk) -and ((Get-Content $mk -Raw) -match "agentforce-adlc")
+        $mkAdded = (Test-Path $mk) -and ((Get-Content $mk -Raw) -match "forcedotcom/sf-skills")
 
         if ($mkAdded) {
             Write-Host "  FALTA plugin agentforce-adlc NO instalado (el marketplace si esta agregado)" -ForegroundColor Red
             Write-Host "        Te falta solo el segundo paso:" -ForegroundColor Yellow
-            Write-Host "        claude plugin install agentforce-adlc@agentforce-adlc" -ForegroundColor Yellow
+            Write-Host "        claude plugin install agentforce-adlc@salesforce" -ForegroundColor Yellow
         } else {
             Write-Host "  FALTA plugin agentforce-adlc (faltan los dos pasos)" -ForegroundColor Red
-            Write-Host "        claude plugin marketplace add SalesforceAIResearch/agentforce-adlc" -ForegroundColor Yellow
-            Write-Host "        claude plugin install agentforce-adlc@agentforce-adlc" -ForegroundColor Yellow
+            Write-Host "        claude plugin marketplace add forcedotcom/sf-skills" -ForegroundColor Yellow
+            Write-Host "        claude plugin install agentforce-adlc@salesforce" -ForegroundColor Yellow
         }
         Write-Host "        Verificar de verdad: claude plugin list --json  (tiene que NO dar [])" -ForegroundColor DarkGray
         $issues += "plugin agentforce-adlc no instalado"
@@ -97,7 +122,14 @@ if (Test-Path ".gitignore") {
 # clon incompleto: en Windows sin core.longpaths, git no puede crear las rutas largas
 # de .agents/skills/ y las deja como borradas. El repo parece estar pero le faltan archivos.
 $deleted = @(git status --porcelain 2>$null | Where-Object { $_ -match '^\s?D\s' })
-if ($deleted.Count -gt 0) {
+# Si skills-lock.json tiene cambios sin commitear, hay una actualizacion de skills en curso
+# (/actualizar-entorno): los borrados son skills retiradas, no un clon roto. En ese caso
+# NO hay que sugerir 'git restore', que desharia la actualizacion entera.
+$lockCambiado = @(git status --porcelain -- skills-lock.json 2>$null).Count -gt 0
+if ($deleted.Count -gt 0 -and $lockCambiado) {
+    Write-Host "  WARN  actualizacion de skills sin commitear ($($deleted.Count) archivo(s) borrados a proposito)" -ForegroundColor Yellow
+    Write-Host "        Terminala con /actualizar-entorno y commitea. NO corras 'git restore': la deshace." -ForegroundColor DarkGray
+} elseif ($deleted.Count -gt 0) {
     Write-Host "  ERROR clon incompleto: faltan $($deleted.Count) archivo(s) del repo" -ForegroundColor Red
     Write-Host "        Causa tipica: limite de 260 caracteres de Windows al clonar." -ForegroundColor Yellow
     Write-Host "        git config --global core.longpaths true" -ForegroundColor Yellow

@@ -169,7 +169,8 @@ Retrieve con `AiAuthoringBundle:`, **no** con `Agent:`.
 
 ```powershell
 npx skills add forcedotcom/sf-skills -l    # listar las del repo original, sin instalar
-claude plugin update agentforce-adlc@agentforce-adlc
+claude plugin marketplace update salesforce              # refrescar el marketplace de Salesforce
+claude plugin update agentforce-adlc@salesforce
 pwsh tools/link-skills.ps1                 # recrear los enlaces de .claude/skills/
 ```
 

@@ -90,7 +90,8 @@ la org (describe / `platform-soql-query`) antes de afirmarlos.
 
 Este proyecto tiene **dos librerías de skills que exponen nombres idénticos**:
 `forcedotcom/sf-skills` (a nivel proyecto, en `.agents/skills/`, cubre toda la plataforma;
-la lista exacta está en `skills-lock.json`) y `agentforce-adlc` (plugin global, namespaceado
+la lista exacta está en `skills-lock.json`) y `agentforce-adlc` (plugin global del
+marketplace oficial `salesforce`, instalado como `agentforce-adlc@salesforce`, namespaceado
 como `agentforce-adlc:*`).
 
 Regla dura:
@@ -130,9 +131,15 @@ CLI verificada. ADLC se mantiene para la pasada de seguridad. Razonamiento compl
 > skills se llaman igual y los dos modos se llaman igual. La decisión del repo (ADR-3,
 > revisada el 2026-10-05) es **seguir usando el de ADLC** para seguridad: nombralo siempre
 > con su prefijo completo, `agentforce-adlc:agentforce-test`, nunca a secas.
+>
+> Dato verificado el 2026-11-10: desde ADLC 0.12.0, las skills `agentforce-*` del plugin son
+> **copias idénticas** de las de sf-skills. Los dos "Modo C" tienen el mismo contenido; lo que
+> ADLC agrega son sus hooks y subagentes. La regla del prefijo sigue igual (ADR-3).
 
-**Nunca** instales ADLC con `tools/install.sh` (file-copy): copia `skills/agentforce-*` a
-`~/.claude/skills/` con los mismos nombres que las de proyecto y rompe el ruteo. Solo plugin.
+**ADLC se instala solo como plugin** (`agentforce-adlc@salesforce`), nunca copiando archivos a
+`~/.claude/skills/`: quedarían con los mismos nombres que las de proyecto y rompen el ruteo.
+**Del marketplace `salesforce` no instales ningún otro plugin** sin revisar esta tabla:
+`salesforce-development` y los demás traen skills con nombres idénticos a las de `.agents/skills/`.
 
 ---
 

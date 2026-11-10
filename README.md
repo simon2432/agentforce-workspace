@@ -62,16 +62,18 @@ Ya clonado, en orden:
 ## Toolchain
 
 - **[forcedotcom/sf-skills](https://github.com/forcedotcom/sf-skills)** — skills oficiales
-  que cubren toda la plataforma (251 al 2026-10-05). Versionadas en `.agents/skills/`,
-  pinneadas en `skills-lock.json`.
-- **[agentforce-adlc](https://github.com/SalesforceAIResearch/agentforce-adlc)** — plugin de
-  Claude Code. Se usa **solo** para la pasada de seguridad: `agentforce-adlc:agentforce-test`
-  en Modo C (red team OWASP de agentes).
+  que cubren toda la plataforma (274 al 2026-11-10, versión 1.69.0). Versionadas en
+  `.agents/skills/`, pinneadas en `skills-lock.json`.
+- **[agentforce-adlc](https://github.com/forcedotcom/sf-skills/tree/main/plugins/builder/agentforce-adlc)**
+  — plugin de Claude Code, del marketplace oficial de Salesforce (`agentforce-adlc@salesforce`).
+  Se usa **solo** para la pasada de seguridad: `agentforce-adlc:agentforce-test` en Modo C
+  (red team OWASP de agentes).
 - **[Salesforce Docs MCP](https://labs.agentforce.com/docs/salesforce-docs-mcp)** — docs
   oficiales en tiempo real, para que Claude no alucine sintaxis.
 
 ⚠️ Las dos librerías exponen skills con **nombres idénticos**. El ruteo está resuelto en
-[CLAUDE.md §2](CLAUDE.md). No instales ADLC por file-copy (`install.sh`) — rompe ese ruteo.
+[CLAUDE.md §2](CLAUDE.md). Del marketplace de Salesforce instalá **solo** `agentforce-adlc`:
+los otros plugins traen skills con los mismos nombres y rompen ese ruteo.
 
 ---
 

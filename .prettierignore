@@ -9,3 +9,8 @@
 .vscode
 
 coverage/
+
+# Skills de sf-skills: copias exactas del repo original (ADR-1). Si prettier las reformatea
+# en el pre-commit, dejan de coincidir con el original y con los hashes del lock.
+.agents/
+skills-lock.json

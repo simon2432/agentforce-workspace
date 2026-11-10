@@ -270,8 +270,8 @@ que lo vea un usuario real.
   `agentforce-adlc:agentforce-test`. Ojo con el ruteo: para tests **funcionales** se usa
   `agentforce-test` de sf-skills; para los de **seguridad**, el del plugin (`CLAUDE.md` §2).
 - Desde sf-skills 1.59.0, el `agentforce-test` de sf-skills **también** tiene un "Modo C" de
-  seguridad. El repo sigue usando el de ADLC (ADR-3): invocalo siempre con el prefijo
-  completo `agentforce-adlc:agentforce-test`, nunca a secas.
+  seguridad (desde ADLC 0.12.0, el mismo contenido). El repo sigue usando el de ADLC (ADR-3):
+  invocalo siempre con el prefijo completo `agentforce-adlc:agentforce-test`, nunca a secas.
 - **C1** (`--mode C1-author` / `C1-run`) escribe y deploya una suite de seguridad reusable
   como `AiEvaluationDefinition` — sirve de regresión.
 - **C2** es el red team en vivo, con la nota A–F. Es el que va antes de dar por cerrado.

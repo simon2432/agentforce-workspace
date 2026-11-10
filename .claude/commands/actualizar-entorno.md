@@ -17,6 +17,9 @@ separado y no encadenes: si algo falla, frená y explicámelo.
   skills del repo original sin instalar nada. Comparala con las carpetas de
   `.agents/skills/` y mostrame cuáles son **nuevas** y cuáles **retiró Salesforce**.
   Esperá mi OK antes de instalar.
+  Ojo: esa lista incluye también las skills que viven **solo dentro de un plugin**
+  (`plugins/builder/<plugin>/skills/`). Una skill que se mudó de `skills/` a un plugin **no
+  está retirada**: se queda. Retirada es solo la que no aparece en esa lista (ADR-6).
 - **Quitar las retiradas:** `npx skills remove -s <nombres> -y`. Ojo: esto borra las
   carpetas pero **no** las saca de `skills-lock.json` (se limpia más abajo).
 - **Instalar solo para Claude Code:**
@@ -30,7 +33,9 @@ separado y no encadenes: si algo falla, frená y explicámelo.
   `.claude/skills/` y corré `pwsh tools/link-skills.ps1` para recrear los enlaces.
 - **Limpiar el lock:** sacá de `skills-lock.json` toda entrada sin carpeta en
   `.agents/skills/`, y verificá que toda carpeta tenga su entrada y que todas digan
-  `"source": "forcedotcom/sf-skills"`.
+  `"source": "forcedotcom/sf-skills"`. Un `skillPath` que empieza con `plugins/` es normal
+  (skill que vive en un plugin). Pero guiate por las **carpetas**, no por el lock: el
+  instalador a veces le reescribe a una skill retirada un `skillPath` de plugin que no existe.
 - Verificá que las rutas que citan los docs del repo sigan existiendo (las de
   `.agents/skills/...` en `RUNBOOK.md`, `SETUP.md`, `CLAUDE.md` y `templates/`). Si alguna
   desapareció, proponeme la corrección.
@@ -42,22 +47,40 @@ separado y no encadenes: si algo falla, frená y explicámelo.
 
 ## 2. Plugin agentforce-adlc (global)
 
-- `claude plugin list`
+Viene del marketplace oficial de Salesforce (`forcedotcom/sf-skills`, nombre `salesforce`).
+El repo viejo `SalesforceAIResearch/agentforce-adlc` quedó congelado (ADR-2).
+
+- `claude plugin list`. Lo esperado es `agentforce-adlc@salesforce`.
+- **Si dice `agentforce-adlc@agentforce-adlc`, es la fuente vieja**: avisame y, con mi OK,
+  migrá (se llaman igual, así que primero sacá la vieja):
+  ```
+  claude plugin uninstall agentforce-adlc@agentforce-adlc
+  claude plugin marketplace remove agentforce-adlc
+  ```
+  y seguí con el paso de "no está instalado".
+- **Python:** verificá `python3 --version` (no `py`): tiene que decir `Python 3.x`, 3.9 o más.
+  Los hooks del plugin llaman a `python3`. En Windows suele ser el atajo de la Microsoft
+  Store, que falla en silencio: ver la nota de Windows en `SETUP.md` Parte A.
 - Si NO está instalado:
   ```
-  claude plugin marketplace add SalesforceAIResearch/agentforce-adlc
-  claude plugin install agentforce-adlc@agentforce-adlc
+  claude plugin marketplace add forcedotcom/sf-skills
+  claude plugin install agentforce-adlc@salesforce
   ```
-  Requiere Python 3.9+ (`py --version`). Verificalo antes.
-- Si SÍ está: `claude plugin update agentforce-adlc@agentforce-adlc`
+- Si SÍ está: `claude plugin marketplace update salesforce` y después
+  `claude plugin update agentforce-adlc@salesforce`.
 - **Después de actualizar, listá qué skills expone realmente el plugin:**
-  `ls ~/.claude/plugins/cache/agentforce-adlc/agentforce-adlc/<version>/skills`
+  `ls ~/.claude/plugins/cache/salesforce/agentforce-adlc/<version>/skills`
   ADLC renombra y fusiona skills entre versiones (en 0.11.0 borró `agentforce-secure` y
   movió la seguridad al Modo C de `agentforce-test`). Si la lista no coincide con la tabla
   de ruteo de `CLAUDE.md` §2, avisame y proponé la corrección.
-- **Nunca** uses `tools/install.sh` ni `install.py` de ese repo: copian
-  `skills/agentforce-*` a `~/.claude/skills/` con los mismos nombres que las de proyecto
-  y rompen el ruteo de CLAUDE.md §2.
+- **Leé el `CHANGELOG.md` del plugin** (en la misma carpeta de la versión) desde la versión
+  anterior. Resumime en lenguaje simple los cambios de **hooks y permisos**: en 0.13.0
+  corrigieron un hook que aprobaba solo cualquier comando Bash.
+- **Del marketplace `salesforce` no instales ningún otro plugin.** `salesforce-development`
+  y los demás traen skills con los mismos nombres que las de `.agents/skills/`.
+- **Nunca** instales ADLC copiando archivos a `~/.claude/skills/` (lo que hacía el
+  `install.sh` del repo viejo): quedan con los mismos nombres que las de proyecto y rompen
+  el ruteo de CLAUDE.md §2.
 - **Chequeo anti-colisión:** confirmá que NO exista ninguna carpeta `agentforce-*` dentro
   de `~/.claude/skills/`. Si existe, avisame antes de tocar nada.
 

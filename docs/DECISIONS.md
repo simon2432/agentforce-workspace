@@ -8,7 +8,10 @@ Por qué el repo está armado así. Si algo de acá cambia, actualizá el ADR en
 
 **Decisión:** las skills de `forcedotcom/sf-skills` viven en `.agents/skills/`, se commitean,
 y quedan pinneadas por hash en `skills-lock.json` (94 al 2026-07-27; 251 al 2026-10-05,
-versión 1.59.0 del repo original).
+versión 1.59.0 del repo original; 274 al 2026-11-10, versión 1.69.0).
+
+Ojo: el lock guarda solo un hash por skill, **no la versión ni el commit del repo original**.
+La versión de cada actualización queda anotada acá y en el mensaje del commit.
 
 **Regla que se desprende:** `.agents/skills/` contiene **solo** skills de sf-skills. Nada de
 un trabajo puntual se guarda ahí adentro: como la carpeta se commitea entera, cualquier
@@ -56,7 +59,27 @@ Beneficios secundarios del plugin: es self-contained (no ensucia `~/.claude/`), 
 `claude plugin update`, y el sistema de plugins cablea correctamente los `hooks/` y los 4
 subagentes de ADLC — cosa que el file-copy hace a mano y frágilmente.
 
-**Costo:** requiere Python 3.9+ en la máquina. Está documentado en `SETUP.md` Parte A.
+**Costo:** requiere Python 3.9+ en la máquina, **invocable como `python3`** (los hooks del
+plugin llaman a ese comando). Está documentado en `SETUP.md` Parte A.
+
+**Actualización 2026-11-10 — ADLC cambió de casa.** Salesforce portó ADLC al repo oficial
+`forcedotcom/sf-skills` (`plugins/builder/agentforce-adlc`), que funciona como marketplace de
+Claude Code con el nombre `salesforce`. El port es solo plugin: no trae `install.sh`. El repo
+original `SalesforceAIResearch/agentforce-adlc` no tiene cambios desde el 2026-09-12.
+
+- **Decisión:** instalar `agentforce-adlc@salesforce`
+  (`claude plugin marketplace add forcedotcom/sf-skills`). Se migró de 0.11.0 (fuente vieja) a
+  0.14.0 el 2026-11-10.
+- **Regla nueva:** de ese marketplace se instala **solo** `agentforce-adlc`. Los otros plugins
+  (`salesforce-development`, `experience-lwc`, etc.) traen skills con los mismos nombres que
+  las de `.agents/skills/` y abrirían una tercera colisión de ruteo.
+- **Lección:** con la fuente vieja, `claude plugin update agentforce-adlc@agentforce-adlc`
+  solo podía llegar a lo último de ese repo (0.12.0), nunca a las versiones que Salesforce
+  publica ahora en su marketplace. Al actualizar, mirar de qué marketplace viene el plugin,
+  no solo su número de versión.
+- **Hallazgo de la misma revisión:** en Windows, `python3` era el atajo de la Microsoft Store
+  y los hooks de ADLC nunca corrieron (fallaban en silencio). `tools/bootstrap.ps1` lo daba
+  por bueno porque probaba `py` primero. Corregido en el script y en `SETUP.md`.
 
 ---
 
@@ -117,6 +140,23 @@ ADLC pasó a tener equivalente en la librería primaria.
 - **Para reevaluar:** si ADLC deja de mantenerse o el Modo C de sf-skills lo supera, pasar
   la seguridad a sf-skills y dejar ADLC como opcional.
 
+**Revisión 2026-11-10 — el contenido es el mismo.** Desde ADLC 0.12.0 (según su
+`CHANGELOG.md`), las skills `agentforce-*` del plugin se re-sincronizan **byte a byte** desde
+`skills/` de sf-skills. Verificado: en el commit `0c7cb93` las 7 skills de
+`plugins/builder/agentforce-adlc/skills/` son idénticas a las de `skills/`. O sea, los dos
+"Modo C" no son dos implementaciones: son la misma.
+
+- Lo único propio de ADLC son sus **hooks** (`guardrails.py` antes de cada Bash,
+  `agent-validator.py` después de escribir un `.agent`) y sus **4 subagentes**.
+- **Decisión:** no se cambia el ruteo en esta revisión. Dar la seguridad por ADLC no cambia el
+  resultado, y la regla del prefijo completo sigue evitando la elección no determinística.
+- **Para decidir más adelante:** pasar la seguridad a `agentforce-test` de sf-skills y dejar
+  ADLC solo por sus hooks, o sacarlo. Es una simplificación, no una corrección.
+- **Lección de seguridad:** hasta ADLC 0.12.0, el hook `guardrails.py` respondía "allow" a todo
+  comando Bash que no bloqueaba, salteándose el pedido de permiso de Claude Code. Hasta la
+  0.11.0 lo hacía en **cualquier** proyecto de la máquina. Corregido en 0.13.0. Al
+  actualizar ADLC, leé el `CHANGELOG.md` del plugin, no solo la lista de skills.
+
 ---
 
 ## ADR-4 — Repo agnóstico de org
@@ -151,14 +191,28 @@ PRD (`templates/prd-agente.md` / `templates/prd-general.md`) y su plantilla de c
 `specs/`.
 
 **Consecuencia:** se conservan todas las skills de sf-skills (94 en julio, 251 desde el
-2026-10-05). Se descartó la idea de podarlas a las ~37 de agentes (hubo un script
-`prune-skills.mjs`, eliminado): podar contradecía el alcance genérico. El costo es algo de
+2026-10-05, 274 desde el 2026-11-10). Se descartó la idea de podarlas a las ~37 de agentes
+(hubo un script `prune-skills.mjs`, eliminado): podar contradecía el alcance genérico. El costo es algo de
 ruido de triggering entre skills; lo mitiga el ruteo explícito de `CLAUDE.md` §2.
 
 Las skills que Salesforce **retira** del repo original también se borran acá al actualizar
 (así se hizo el 2026-10-05 con las 7 `data360-*`, `experience-content-media-search` y
 `platform-agentsetup-categories-fetch`): conservar copias congeladas daría skills que nadie
-mantiene. Si hiciera falta una, está en el historial de git.
+mantiene. Si hiciera falta una, está en el historial de git. El 2026-11-10 se retiraron 5:
+`experience-content-media-stock-image-search`, `field-service-setup-orchestrator-get`,
+`platform-deploy-validate`, `platform-quick-deploy` y `service-de-channel-consent-configure`.
+
+**Skills que viven solo dentro de un plugin (desde 1.6x).** Salesforce empezó a mover skills de
+`skills/` a `plugins/builder/<plugin>/skills/`. **Mudarse no es retirarse**: el instalador
+(`npx skills add forcedotcom/sf-skills`) las descubre igual y las instala, con un `skillPath`
+que empieza con `plugins/` en el lock. Se conservan. Al 2026-11-10 son 9, entre ellas
+`platform-destructive-deploy`, `platform-apex-anonymous-run`, `platform-manifest-generate` y
+`dx-project-create`. **Retirada** = no aparece en ningún lado del repo original (la lista de
+`npx skills add forcedotcom/sf-skills -l`).
+
+Hay 19 nombres que existen en `skills/` y en algún plugin con contenido distinto. Para todos,
+el instalador tomó la copia de `skills/` (verificado: en el lock, todo `skillPath` con
+`plugins/` es de una skill que no existe en `skills/`).
 
 **Punto de entrada único:** `templates/INICIAR.md` — un prompt que un usuario sin conocimientos
 de código pega en Claude Code, y que clasifica el trabajo, elige el meta-prompt y arranca el
