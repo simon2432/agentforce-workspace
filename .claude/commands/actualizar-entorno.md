@@ -17,9 +17,15 @@ separado y no encadenes: si algo falla, frená y explicámelo.
   skills del repo original sin instalar nada. Comparala con las carpetas de
   `.agents/skills/` y mostrame cuáles son **nuevas** y cuáles **retiró Salesforce**.
   Esperá mi OK antes de instalar.
-  Ojo: esa lista incluye también las skills que viven **solo dentro de un plugin**
-  (`plugins/builder/<plugin>/skills/`). Una skill que se mudó de `skills/` a un plugin **no
-  está retirada**: se queda. Retirada es solo la que no aparece en esa lista (ADR-6).
+  Ojo con dos cosas (ADR-6):
+  - Esa lista incluye las skills que viven **solo dentro de un plugin**
+    (`plugins/builder/<plugin>/skills/`). Una skill que se mudó a un plugin **no** está
+    retirada: se queda.
+  - Esa lista **oculta** las skills marcadas `internal: true`, pero la instalación con
+    `--skill '*'` las trae igual. Antes de dar por retirada una skill que falta en la lista,
+    buscá su `SKILL.md` en todo el repo original
+    (`gh api "repos/forcedotcom/sf-skills/git/trees/main?recursive=1"`). Si existe en algún
+    lado, no está retirada. Retirada = lo que `--skill '*'` ya no instala.
 - **Quitar las retiradas:** `npx skills remove -s <nombres> -y`. Ojo: esto borra las
   carpetas pero **no** las saca de `skills-lock.json` (se limpia más abajo).
 - **Instalar solo para Claude Code:**

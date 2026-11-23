@@ -148,7 +148,7 @@ sintaxis que ya no compila.
 > `npx skills update -p` para skills de proyecto, pero el repo no lo usa: el flujo probado
 > es el de `/actualizar-entorno`, que además limpia las skills que Salesforce retira.)
 
-> Las skills se conservan completas a propósito (274 al 2026-11-10, versión 1.69.0, incluidas
+> Las skills se conservan completas a propósito (272 al 2026-11-23, versión 1.71.0, incluidas
 > las que Salesforce publica solo dentro de sus plugins): este repo sirve para **todo** tipo
 > de trabajo Salesforce, no solo agentes.
 >

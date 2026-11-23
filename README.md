@@ -62,7 +62,7 @@ Ya clonado, en orden:
 ## Toolchain
 
 - **[forcedotcom/sf-skills](https://github.com/forcedotcom/sf-skills)** — skills oficiales
-  que cubren toda la plataforma (274 al 2026-11-10, versión 1.69.0). Versionadas en
+  que cubren toda la plataforma (272 al 2026-11-23, versión 1.71.0). Versionadas en
   `.agents/skills/`, pinneadas en `skills-lock.json`.
 - **[agentforce-adlc](https://github.com/forcedotcom/sf-skills/tree/main/plugins/builder/agentforce-adlc)**
   — plugin de Claude Code, del marketplace oficial de Salesforce (`agentforce-adlc@salesforce`).

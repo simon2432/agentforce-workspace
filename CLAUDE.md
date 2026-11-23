@@ -109,8 +109,9 @@ CLI verificada. ADLC se mantiene para la pasada de seguridad. Razonamiento compl
 `docs/DECISIONS.md` (ADR-3).
 
 > **Data Cloud:** desde sf-skills 1.59.0 ya no existen las skills `data360-activate`,
-> `-connect`, `-harmonize`, `-orchestrate`, `-prepare`, `-query` ni `-segment` (las retiró
-> Salesforce). Quedan `data360-schema-get`, `data360-code-extension-generate`,
+> `-connect`, `-harmonize`, `-orchestrate`, `-prepare`, `-query` ni `-segment`, y desde
+> 1.70.0 tampoco `data360-schema-get` (las retiró Salesforce). Quedan
+> `data360-code-extension-generate` (su flujo incluye descubrir el esquema de DLO/DMO),
 > `platform-dataspace-access-configure` y, para agentes, `agentforce-observe` y
 > `agentforce-d360-analyze`. Para lo que no cubran, la fuente es el MCP de docs (§1).
 

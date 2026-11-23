@@ -8,7 +8,8 @@ Por qué el repo está armado así. Si algo de acá cambia, actualizá el ADR en
 
 **Decisión:** las skills de `forcedotcom/sf-skills` viven en `.agents/skills/`, se commitean,
 y quedan pinneadas por hash en `skills-lock.json` (94 al 2026-07-27; 251 al 2026-10-05,
-versión 1.59.0 del repo original; 274 al 2026-11-10, versión 1.69.0).
+versión 1.59.0 del repo original; 274 al 2026-11-10, versión 1.69.0; 272 al 2026-11-23,
+versión 1.71.0).
 
 Ojo: el lock guarda solo un hash por skill, **no la versión ni el commit del repo original**.
 La versión de cada actualización queda anotada acá y en el mensaje del commit.
@@ -191,9 +192,10 @@ PRD (`templates/prd-agente.md` / `templates/prd-general.md`) y su plantilla de c
 `specs/`.
 
 **Consecuencia:** se conservan todas las skills de sf-skills (94 en julio, 251 desde el
-2026-10-05, 274 desde el 2026-11-10). Se descartó la idea de podarlas a las ~37 de agentes
-(hubo un script `prune-skills.mjs`, eliminado): podar contradecía el alcance genérico. El costo es algo de
-ruido de triggering entre skills; lo mitiga el ruteo explícito de `CLAUDE.md` §2.
+2026-10-05, 274 desde el 2026-11-10, 272 desde el 2026-11-23). Se descartó la idea de
+podarlas a las ~37 de agentes (hubo un script `prune-skills.mjs`, eliminado): podar
+contradecía el alcance genérico. El costo es algo de ruido de triggering entre skills; lo
+mitiga el ruteo explícito de `CLAUDE.md` §2.
 
 Las skills que Salesforce **retira** del repo original también se borran acá al actualizar
 (así se hizo el 2026-10-05 con las 7 `data360-*`, `experience-content-media-search` y
@@ -201,18 +203,30 @@ Las skills que Salesforce **retira** del repo original también se borran acá a
 mantiene. Si hiciera falta una, está en el historial de git. El 2026-11-10 se retiraron 5:
 `experience-content-media-stock-image-search`, `field-service-setup-orchestrator-get`,
 `platform-deploy-validate`, `platform-quick-deploy` y `service-de-channel-consent-configure`.
+El 2026-11-23 se retiraron 3: `data360-schema-get`,
+`field-service-prework-brief-deployer-configure` y `field-service-voice-to-form-configure`.
 
 **Skills que viven solo dentro de un plugin (desde 1.6x).** Salesforce empezó a mover skills de
 `skills/` a `plugins/builder/<plugin>/skills/`. **Mudarse no es retirarse**: el instalador
 (`npx skills add forcedotcom/sf-skills`) las descubre igual y las instala, con un `skillPath`
-que empieza con `plugins/` en el lock. Se conservan. Al 2026-11-10 son 9, entre ellas
-`platform-destructive-deploy`, `platform-apex-anonymous-run`, `platform-manifest-generate` y
-`dx-project-create`. **Retirada** = no aparece en ningún lado del repo original (la lista de
-`npx skills add forcedotcom/sf-skills -l`).
+que empieza con `plugins/` en el lock. Se conservan. Al 2026-11-23 siguen siendo 9, entre
+ellas `platform-destructive-deploy`, `platform-apex-anonymous-run`, `platform-manifest-generate`
+y `dx-project-create`.
 
-Hay 19 nombres que existen en `skills/` y en algún plugin con contenido distinto. Para todos,
-el instalador tomó la copia de `skills/` (verificado: en el lock, todo `skillPath` con
-`plugins/` es de una skill que no existe en `skills/`).
+**Skills internas (desde 1.71.0).** Salesforce empezó a marcar algunas skills con
+`metadata.internal: true`. Al 2026-11-23 son 4: `platform-capability-search`,
+`platform-destructive-deploy`, `platform-environment-validate` y `platform-lsp-integrate`. La
+lista de `npx skills add forcedotcom/sf-skills -l` las **oculta**, pero la instalación con
+`--skill '*'` las trae y las actualiza igual. Se conservan. Por eso `-l` **no sirve** para
+decidir qué se retiró: el 2026-11-23 casi se borran las 4 por compararlas contra esa lista.
+
+**Retirada** = lo que `npx skills add forcedotcom/sf-skills --skill '*'` ya no instala, o sea,
+una skill cuyo `SKILL.md` no existe en ningún lado del repo original.
+
+Hay nombres que existen en `skills/` y en algún plugin con contenido distinto (19 al
+2026-11-10). Para todos, el instalador toma la copia de `skills/` (verificado el 2026-11-10 y
+el 2026-11-23: en el lock, todo `skillPath` con `plugins/` es de una skill que no existe en
+`skills/`).
 
 **Punto de entrada único:** `templates/INICIAR.md` — un prompt que un usuario sin conocimientos
 de código pega en Claude Code, y que clasifica el trabajo, elige el meta-prompt y arranca el
