@@ -77,7 +77,7 @@ All steps are sequential. Do not skip or reorder. Branch based on the operation 
 
 ### Phase 1 — Gather Context
 
-1. **Verify org API version** — run `scripts/check-api-version.sh 67.0 <org-alias>` and report any errors it returns. If the script fails, generate a `sfdx-project.json` in the metadata output folder with `"sourceApiVersion": "67.0"`.
+1. **Verify org API version** — run `scripts/check-api-version.sh 67.0 <org-alias>` and report any errors it returns. Exit 1 = org below 67.0: stop all org writes and relay the script's next step (delegated: `failed`); local template generation may continue. Exit 2 = version could not be read: warn that it is unverified and continue; the deploy confirms it. Create `sfdx-project.json` in the metadata output folder only if none exists, with `sourceApiVersion` set to the script's `ORG_API_VERSION` (67.0 if exit 2).
 
 2. **Determine operation** — standalone: ask whether the user wants to create a new deployment or update an existing one. Delegated: taken from `values.operation`, then confirmed by the pre-scan (step 4a).
 
@@ -148,7 +148,7 @@ Runs for both Phase 2A and 2B, except when the pre-scan returned `already-config
 
 17b. **Re-read and diff** — `GET` the component again and confirm every intended field landed and no inline block (`embeddedServiceMessagingChannel`, forms) was dropped.
 
-17c. **Publish (Web only) — never automatic.** Publishing makes the changes live to customers; the deploy only saves a draft. After 17b, stop: summarize what changed, give the plain Setup link `<instanceUrl>/lightning/setup/EmbeddedServiceDeployments/<EmbeddedServiceConfigId>/view` so the user can review the draft, and ask whether to publish now. Publish only on an explicit yes in that turn (a "publish" in the original request does not count). Then `dispatch` `POST` on the fully-qualified publish path; if it returns a path/route error, or on Transport B, run the `sf` publish command from `references/connect_api_creation.md`. Delegated: do not publish; return `published: false`. Note: a Web create via Connect API publishes by itself (`isPublishSuccess: true`); say so in the plan before creating.
+17c. **Publish (Web only) — never automatic.** Publishing makes the changes live to customers; the deploy only saves a draft. After 17b, stop: summarize what changed, give the plain Setup link `<instanceUrl>/lightning/setup/EmbeddedServiceDeployments/<EmbeddedServiceConfigId>/view` so the user can review the draft, and ask whether to publish now. Publish only on an explicit yes in that turn (a "publish" in the original request does not count). Then `dispatch` `POST` on the fully-qualified publish path; if it returns a path/route error, or on Transport B, run the `sf` publish command from `references/connect_api_creation.md`. Delegated: do not publish; return `published: true` only if a Web create auto-published (`isPublishSuccess: true`), else `false`. Note: a Web create via Connect API publishes by itself (`isPublishSuccess: true`); say so in the plan before creating.
 
 ### Phase 3 — Validate
 
